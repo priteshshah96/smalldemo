@@ -1,10 +1,4 @@
-Here’s a **comprehensive README.md** for your project, complete with detailed explanations and sections for all aspects of your project:
 
----
-
-### **README.md**
-
-```markdown
 # Annotation Tool
 
 A React-based annotation tool that simplifies the process of annotating text documents. This tool allows users to upload JSON files, annotate text with predefined categories, navigate through events, and download annotated data in JSON format. Designed with a clean and interactive UI using **Vite** and **Tailwind CSS**, the tool is highly customizable and easy to use.
@@ -74,7 +68,6 @@ A React-based annotation tool that simplifies the process of annotating text doc
    git clone https://github.com/priteshshah96/smalldemo.git
    cd smalldemo
    ```
-
 2. Install dependencies:
    ```bash
    npm install

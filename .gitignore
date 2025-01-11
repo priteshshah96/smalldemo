@@ -15,7 +15,7 @@ dist/
 .env.local
 .env.*.local
 
-# Editor settings (e.g., VSCode)
+# Editor settings
 .vscode/
 .idea/
 
@@ -24,9 +24,9 @@ dist/
 Thumbs.db
 
 # Tailwind CSS JIT mode temp files
-*.css.un~ 
+*.css.un~
 
-# Package lock files (only if you're not using a lock file)
+# Lock files (optional)
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
@@ -35,6 +35,6 @@ pnpm-lock.yaml
 *.log
 *.cache
 
-# Optional: If you're using ESLint/Prettier and don't want configs checked in
-.eslintcache
-.prettiercache
+# Temporary files
+simple/
+aimple old/

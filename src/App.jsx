@@ -6,11 +6,14 @@ import {
   ChevronLeft, 
   Save, 
   ChevronDown, 
-  ChevronUp 
+  ChevronUp,
+  HelpCircle,
+  Info 
 } from 'lucide-react';
-import TextAnnotationPanel from './TextAnnotationPanel';
-import JsonViewer from './JsonViewer';
-
+import TextAnnotationPanel from './components/TextAnnotationPanel';
+import JsonViewer from './components/JsonViewer';
+import TutorialDialog from './components/TutorialDialog';
+import WarningBanner from './components/WarningBanner';
 const App = () => {
   // Core state
   const [jsonData, setJsonData] = useState(null);
@@ -21,19 +24,29 @@ const App = () => {
   const [error, setError] = useState('');
   const [lastSaved, setLastSaved] = useState(null);
   const [isAbstractOpen, setIsAbstractOpen] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Helper function to open annotation guide PDF
+  const openAnnotationGuide = () => {
+    window.open('/docs/annotation_guide.pdf', '_blank');
+  };
 
   // Handle Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && selectedText) {
-        setSelectedText(null);
+      if (e.key === 'Escape') {
+        if (selectedText) {
+          setSelectedText(null);
+        }
+        if (showTutorial) {
+          setShowTutorial(false);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedText]);
-
+  }, [selectedText, showTutorial]);
   // File Upload UI
   const FileUploadView = () => (
     <div 
@@ -347,17 +360,22 @@ const App = () => {
 
   // Handle JSON download
   const handleDownload = () => {
+  if (!jsonData || !jsonData[currentPaperIndex]) return;
+  
+    const originalName = jsonData[currentPaperIndex].paper_code || 'annotated_data';
+    const fileName = `${originalName}_annotated.json`;
     const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'annotated_data.json';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-  // Show appropriate view based on state
+  // Shows appropriate view based on state
+  // Main render
   if (error) return <ErrorView />;
   if (!jsonData) return <FileUploadView />;
 
@@ -366,23 +384,28 @@ const App = () => {
     ['Background/Introduction', 'Methods/Approach', 'Results/Findings', 'Conclusions/Implications'].includes(key)
   );
 
+  const isLastEvent = currentEventIndex === jsonData[currentPaperIndex].events.length - 1 &&
+                     currentPaperIndex === jsonData.length - 1;
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <TutorialDialog isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
+      
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-20">
+        {/* Warning Banner */}
+        <WarningBanner />
+        
         <div className="max-w-[95%] mx-auto p-4">
           <div className="flex justify-between items-center mb-2">
+            {/* Left side */}
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-gray-900" aria-label={`Current paper: ${jsonData[currentPaperIndex].paper_code}`}>
+              <h1 className="text-xl font-bold text-gray-900">
                 {jsonData[currentPaperIndex].paper_code}
               </h1>
               {lastSaved && (
-                <span className="text-sm text-gray-500 flex items-center gap-1" 
-                      aria-label={`Last saved at ${new Intl.DateTimeFormat('en-US', {
-                        hour: 'numeric',
-                        minute: 'numeric',
-                      }).format(lastSaved)}`}>
-                  <Save className="w-4 h-4" aria-hidden="true" />
+                <span className="text-sm text-gray-500 flex items-center gap-1">
+                  <Save className="w-4 h-4" />
                   Last saved: {new Intl.DateTimeFormat('en-US', {
                     hour: 'numeric',
                     minute: 'numeric',
@@ -390,25 +413,39 @@ const App = () => {
                 </span>
               )}
             </div>
+
+            {/* Right side */}
             <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-600" 
-                    aria-label={`Paper ${currentPaperIndex + 1} of ${jsonData.length}`}>
+              {/* Help Icons */}
+              <div className="flex items-center gap-3 mr-4">
+                <button
+                  onClick={openAnnotationGuide}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="View annotation guide"
+                >
+                  <Info className="w-5 h-5 text-blue-600" />
+                </button>
+                <button
+                  onClick={() => setShowTutorial(true)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="View tutorial"
+                >
+                  <HelpCircle className="w-5 h-5 text-blue-600" />
+                </button>
+              </div>
+
+              {/* Progress indicators */}
+              <span className="text-sm font-medium text-gray-600">
                 Paper {currentPaperIndex + 1} of {jsonData.length}
               </span>
-              <span className="text-lg font-bold text-blue-600"
-                    aria-label={`Event ${currentEventIndex + 1} of ${jsonData[currentPaperIndex].events.length}`}>
+              <span className="text-lg font-bold text-blue-600">
                 Event {currentEventIndex + 1} of {jsonData[currentPaperIndex].events.length}
               </span>
             </div>
           </div>
 
           {/* Progress bar */}
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden w-full"
-               role="progressbar"
-               aria-valuemin="0"
-               aria-valuemax="100"
-               aria-valuenow={((currentPaperIndex * jsonData[currentPaperIndex].events.length + currentEventIndex) /
-                           (jsonData.length * jsonData[currentPaperIndex].events.length)) * 100}>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden w-full">
             <div 
               className="h-full bg-blue-600 rounded-full transition-all duration-300"
               style={{ 
@@ -502,7 +539,7 @@ const App = () => {
         </div>
       </main>
 
-      {/* Navigation - Fixed at bottom with proper spacing */}
+      {/* Navigation with Finish button */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg py-4 z-50">
         <div className="max-w-[95%] mx-auto flex justify-center gap-4">
           <button
@@ -517,31 +554,37 @@ const App = () => {
               }
             }}
             disabled={currentEventIndex === 0 && currentPaperIndex === 0}
-            aria-label="Previous event"
           >
-            <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+            <ChevronLeft className="w-5 h-5" />
             Previous
           </button>
-          <button
-            className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
-                     disabled:opacity-50 transition-colors duration-200 flex items-center gap-2 w-[100px] sm:w-[120px] justify-center"
-            onClick={() => {
-              if (currentEventIndex < jsonData[currentPaperIndex].events.length - 1) {
-                setCurrentEventIndex(prev => prev + 1);
-              } else if (currentPaperIndex < jsonData.length - 1) {
-                setCurrentPaperIndex(prev => prev + 1);
-                setCurrentEventIndex(0);
-              }
-            }}
-            disabled={
-              currentEventIndex === jsonData[currentPaperIndex].events.length - 1 && 
-              currentPaperIndex === jsonData.length - 1
-            }
-            aria-label="Next event"
-          >
-            Next
-            <ChevronRight className="w-5 h-5" aria-hidden="true" />
-          </button>
+
+          {isLastEvent ? (
+            <button
+              onClick={handleDownload}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 
+                       transition-colors duration-200 flex items-center gap-2"
+            >
+              Finish
+              <Save className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                       transition-colors duration-200 flex items-center gap-2 w-[100px] sm:w-[120px] justify-center"
+              onClick={() => {
+                if (currentEventIndex < jsonData[currentPaperIndex].events.length - 1) {
+                  setCurrentEventIndex(prev => prev + 1);
+                } else if (currentPaperIndex < jsonData.length - 1) {
+                  setCurrentPaperIndex(prev => prev + 1);
+                  setCurrentEventIndex(0);
+                }
+              }}
+            >
+              Next
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
     </div>

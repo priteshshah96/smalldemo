@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 
+// Color scheme for syntax highlighting
+const SYNTAX_COLORS = {
+  key: 'text-yellow-300 font-medium',
+  string: 'text-emerald-300',
+  bracket: 'text-blue-300',
+  colon: 'text-gray-300',
+  comma: 'text-gray-400'
+};
+
 const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
-  // Initialize with all important paths expanded
   const [expandedPaths, setExpandedPaths] = useState(new Set([
     'Arguments', 
     'Arguments.Object',
@@ -19,7 +27,6 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
     'Arguments.Contradictions'
   ]));
 
-  // Auto-expand paths with non-empty values
   useEffect(() => {
     const pathsToExpand = new Set([...expandedPaths]);
     
@@ -28,7 +35,6 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
       
       Object.entries(obj).forEach(([key, value]) => {
         const newPath = currentPath ? `${currentPath}.${key}` : key;
-        
         if (value && typeof value === 'string' && value !== '') {
           pathsToExpand.add(newPath);
         } else if (typeof value === 'object' && value !== null) {
@@ -58,24 +64,18 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
     return typeof value === 'object' && value !== null && Object.keys(value).length > 0;
   };
 
-  // Helper function to handle deletion
   const handleDelete = (path, e) => {
-    e.stopPropagation(); // Prevent event bubbling
+    e.stopPropagation();
     e.preventDefault();
     
-    // Format the path correctly
     const pathArray = path.split('.');
-    const formattedPath = pathArray.map(part => {
-      return !isNaN(part) ? parseInt(part) : part;
-    }).join('.');
+    const formattedPath = pathArray.map(part => 
+      !isNaN(part) ? parseInt(part) : part
+    ).join('.');
     
-    console.log('Deleting path:', formattedPath);
-    
-    // Only proceed if there's a path and delete handler
     if (formattedPath && onRemoveAnnotation) {
       onRemoveAnnotation(formattedPath);
       
-      // Ensure the UI updates by toggling the relevant path's expansion
       setExpandedPaths(prev => {
         const newPaths = new Set(prev);
         const parentPath = pathArray.slice(0, -1).join('.');
@@ -98,22 +98,26 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
 
     if (isCollapsible) {
       return (
-        <div key={key} className="group">
+        <div key={key} className="group font-mono">
           <div 
-            className="flex items-start cursor-pointer hover:bg-gray-800 rounded px-1"
+            className="flex items-start cursor-pointer hover:bg-gray-800/50 rounded px-2 py-0.5 -mx-2
+                     focus-within:ring-1 focus-within:ring-blue-500 focus-within:outline-none"
             onClick={() => togglePath(currentPath)}
             role="button"
+            tabIndex={0}
             aria-expanded={isExpanded}
             aria-label={`Toggle ${key} section`}
+            onKeyPress={(e) => e.key === 'Enter' && togglePath(currentPath)}
           >
-            <span className="text-gray-400 w-4">
+            <span className="text-gray-400 w-4 mt-1">
               {isExpanded ? 
-                <ChevronDown className="w-4 h-4" aria-hidden="true" /> : 
-                <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" /> : 
+                <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
               }
             </span>
-            <span className="text-yellow-400">{indent}"{key}"</span>
-            <span className="text-white">: {Array.isArray(value) ? '[' : '{'}</span>
+            <span className={SYNTAX_COLORS.key}>{indent}"{key}"</span>
+            <span className={SYNTAX_COLORS.colon}>: </span>
+            <span className={SYNTAX_COLORS.bracket}>{Array.isArray(value) ? '[' : '{'}</span>
           </div>
           <div className={`ml-4 ${isExpanded ? 'block' : 'hidden'}`}>
             {Array.isArray(value) 
@@ -122,52 +126,60 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
                     {typeof item === 'object' 
                       ? renderJsonField(index, item, depth + 1, currentPath)
                       : (
-                        <div className="flex items-center gap-2 group">
-                          <span className="text-green-400">{indent}  "{item}"</span>
+                        <div className="flex items-center gap-2 group py-0.5">
+                          <span className={SYNTAX_COLORS.string}>{indent}  "{item}"</span>
                           <button
                             onClick={(e) => handleDelete(`${currentPath}.${index}`, e)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded 
-                                     transition-opacity focus:opacity-100"
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded
+                                     transition-opacity focus:opacity-100 focus:outline-none
+                                     focus:ring-1 focus:ring-red-500"
                             aria-label={`Remove ${item} annotation`}
                           >
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
                           </button>
+                          {index < value.length - 1 && (
+                            <span className={SYNTAX_COLORS.comma}>,</span>
+                          )}
                         </div>
                       )
                     }
-                    {index < value.length - 1 && ','}
                   </div>
                 ))
               : Object.entries(value).map(([k, v], index, arr) => (
                   <div key={k}>
                     {renderJsonField(k, v, depth + 1, currentPath)}
-                    {index < arr.length - 1 && ','}
+                    {index < arr.length - 1 && (
+                      <span className={SYNTAX_COLORS.comma}>,</span>
+                    )}
                   </div>
                 ))
             }
           </div>
-          <div className={isExpanded ? 'block' : 'hidden'}>
-            <span className="text-white">{indent}{Array.isArray(value) ? ']' : '}'}</span>
+          <div className={isExpanded ? 'block py-0.5' : 'hidden'}>
+            <span className={SYNTAX_COLORS.bracket}>
+              {indent}{Array.isArray(value) ? ']' : '}'}
+            </span>
           </div>
         </div>
       );
     }
 
     return (
-      <div key={key} className="flex items-center group">
-        <span className="text-yellow-400">{indent}"{key}"</span>
-        <span className="text-white">: </span>
-        <span className="text-green-400">
+      <div key={key} className="flex items-center group py-0.5 font-mono">
+        <span className={SYNTAX_COLORS.key}>{indent}"{key}"</span>
+        <span className={SYNTAX_COLORS.colon}>: </span>
+        <span className={SYNTAX_COLORS.string}>
           {typeof value === 'string' ? `"${value}"` : JSON.stringify(value)}
         </span>
         {typeof value === 'string' && value !== '' && (
           <button
             onClick={(e) => handleDelete(currentPath, e)}
             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
-                     transition-opacity focus:opacity-100"
+                     transition-opacity focus:opacity-100 focus:outline-none
+                     focus:ring-1 focus:ring-red-500"
             aria-label={`Remove ${key} annotation`}
           >
-            <Trash2 className="w-4 h-4 text-red-500" />
+            <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
           </button>
         )}
       </div>
@@ -175,37 +187,40 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+    <div className="bg-gray-900 rounded-xl shadow-lg overflow-hidden border border-gray-800">
       {/* Header */}
-      <div className="bg-gray-800 px-4 py-3 flex justify-between items-center">
-        <h3 className="text-white font-medium">JSON Output</h3>
+      <div className="bg-gray-800/50 px-4 py-3 flex justify-between items-center border-b border-gray-700">
+        <h3 className="text-gray-100 font-medium tracking-wide">JSON Output</h3>
         <button
           onClick={onDownload}
-          className="p-2 hover:bg-gray-700 rounded transition-colors focus:outline-none 
-                   focus:ring-2 focus:ring-blue-500"
+          className="p-2 hover:bg-gray-700 rounded-lg transition-colors
+                   focus:outline-none focus:ring-2 focus:ring-blue-500"
           title="Download JSON"
           aria-label="Download JSON file"
         >
-          <Download className="w-4 h-4 text-gray-400" />
+          <Download className="w-4 h-4 text-gray-400 hover:text-gray-300" />
         </button>
       </div>
 
       {/* JSON Content */}
       <div 
-        className="p-4 font-mono text-sm overflow-auto max-h-[calc(100vh-24rem)]"
+        className="p-4 text-sm overflow-auto max-h-[calc(100vh-24rem)] font-mono
+                   scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900"
         role="region"
         aria-label="JSON content viewer"
       >
-        <div className="text-white">{'{'}</div>
+        <div className={SYNTAX_COLORS.bracket}>{'{'}</div>
         <div className="ml-4">
           {Object.entries(data).map(([key, value], index, arr) => (
             <React.Fragment key={key}>
               {renderJsonField(key, value, 1)}
-              {index < arr.length - 1 && ','}
+              {index < arr.length - 1 && (
+                <span className={SYNTAX_COLORS.comma}>,</span>
+              )}
             </React.Fragment>
           ))}
         </div>
-        <div className="text-white">{'}'}</div>
+        <div className={SYNTAX_COLORS.bracket}>{'}'}</div>
       </div>
     </div>
   );

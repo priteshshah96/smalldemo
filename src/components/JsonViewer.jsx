@@ -1,7 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 
-// Color scheme for syntax highlighting
+// Field ordering configuration
+const FIELD_ORDER = [
+  'Background/Introduction',
+  'Methods/Approach',
+  'Results/Findings',
+  'Conclusions/Implications',
+  'Text',
+  'Main Action',
+  'Arguments'
+];
+
+// Arguments field ordering
+const ARGUMENTS_ORDER = [
+  'Agent',
+  'Object',
+  'Context',
+  'Purpose',
+  'Method',
+  'Results',
+  'Analysis',
+  'Challenge',
+  'Ethical',
+  'Implications',
+  'Contradictions'
+];
+
+// Event type fields that can have summaries
+const EVENT_TYPES = [
+  'Background/Introduction',
+  'Methods/Approach',
+  'Results/Findings',
+  'Conclusions/Implications'
+];
+
 const SYNTAX_COLORS = {
   key: 'text-yellow-300 font-medium',
   string: 'text-emerald-300',
@@ -35,6 +68,12 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
       
       Object.entries(obj).forEach(([key, value]) => {
         const newPath = currentPath ? `${currentPath}.${key}` : key;
+        
+        // Always expand Arguments and Main Action paths
+        if (newPath.startsWith('Arguments.') || newPath === 'Arguments' || newPath === 'Main Action') {
+          pathsToExpand.add(newPath);
+        }
+        
         if (value && typeof value === 'string' && value !== '') {
           pathsToExpand.add(newPath);
         } else if (typeof value === 'object' && value !== null) {
@@ -49,6 +88,10 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   }, [data]);
 
   const togglePath = (path) => {
+    if (path.startsWith('Arguments.') || path === 'Arguments' || path === 'Main Action') {
+      return;
+    }
+    
     setExpandedPaths(prev => {
       const newSet = new Set(prev);
       if (newSet.has(path)) {
@@ -67,6 +110,12 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   const handleDelete = (path, e) => {
     e.stopPropagation();
     e.preventDefault();
+    
+    // Check if the path is an event type with summary
+    if (EVENT_TYPES.includes(path)) {
+      onRemoveAnnotation(path);
+      return;
+    }
     
     const pathArray = path.split('.');
     const formattedPath = pathArray.map(part => 
@@ -90,18 +139,30 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
     }
   };
 
+  const sortEntries = (entries, orderArray) => {
+    return entries.sort((a, b) => {
+      const indexA = orderArray.indexOf(a[0]);
+      const indexB = orderArray.indexOf(b[0]);
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  };
+
   const renderJsonField = (key, value, depth = 0, path = '') => {
     const indent = '  '.repeat(depth);
     const isCollapsible = shouldCollapse(key, value);
     const currentPath = path ? `${path}.${key}` : key;
     const isExpanded = expandedPaths.has(currentPath);
+    const isArgumentsSection = currentPath.startsWith('Arguments.') || currentPath === 'Arguments' || currentPath === 'Main Action';
 
     if (isCollapsible) {
       return (
         <div key={key} className="group font-mono">
           <div 
-            className="flex items-start cursor-pointer hover:bg-gray-800/50 rounded px-2 py-0.5 -mx-2
-                     focus-within:ring-1 focus-within:ring-blue-500 focus-within:outline-none"
+            className={`flex items-start ${!isArgumentsSection ? 'cursor-pointer' : ''} hover:bg-gray-800/50 rounded px-2 py-0.5 -mx-2
+                     focus-within:ring-1 focus-within:ring-blue-500 focus-within:outline-none`}
             onClick={() => togglePath(currentPath)}
             role="button"
             tabIndex={0}
@@ -145,14 +206,22 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
                     }
                   </div>
                 ))
-              : Object.entries(value).map(([k, v], index, arr) => (
-                  <div key={k}>
-                    {renderJsonField(k, v, depth + 1, currentPath)}
-                    {index < arr.length - 1 && (
-                      <span className={SYNTAX_COLORS.comma}>,</span>
-                    )}
-                  </div>
-                ))
+              : (() => {
+                  let entries = Object.entries(value);
+                  if (path === '') {
+                    entries = sortEntries(entries, FIELD_ORDER);
+                  } else if (path === 'Arguments') {
+                    entries = sortEntries(entries, ARGUMENTS_ORDER);
+                  }
+                  return entries.map(([k, v], index, arr) => (
+                    <div key={k}>
+                      {renderJsonField(k, v, depth + 1, currentPath)}
+                      {index < arr.length - 1 && (
+                        <span className={SYNTAX_COLORS.comma}>,</span>
+                      )}
+                    </div>
+                  ));
+                })()
             }
           </div>
           <div className={isExpanded ? 'block py-0.5' : 'hidden'}>
@@ -171,9 +240,9 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
         <span className={SYNTAX_COLORS.string}>
           {typeof value === 'string' ? `"${value}"` : JSON.stringify(value)}
         </span>
-        {typeof value === 'string' && value !== '' && (
+        {typeof value === 'string' && (EVENT_TYPES.includes(key) || value !== '') && (
           <button
-            onClick={(e) => handleDelete(currentPath, e)}
+            onClick={(e) => handleDelete(key, e)}
             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
                      transition-opacity focus:opacity-100 focus:outline-none
                      focus:ring-1 focus:ring-red-500"
@@ -188,7 +257,6 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
 
   return (
     <div className="bg-gray-900 rounded-xl shadow-lg overflow-hidden border border-gray-800">
-      {/* Header */}
       <div className="bg-gray-800/50 px-4 py-3 flex justify-between items-center border-b border-gray-700">
         <h3 className="text-gray-100 font-medium tracking-wide">JSON Output</h3>
         <button
@@ -202,7 +270,6 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
         </button>
       </div>
 
-      {/* JSON Content */}
       <div 
         className="p-4 text-sm overflow-auto max-h-[calc(100vh-24rem)] font-mono
                    scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900"
@@ -211,14 +278,18 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
       >
         <div className={SYNTAX_COLORS.bracket}>{'{'}</div>
         <div className="ml-4">
-          {Object.entries(data).map(([key, value], index, arr) => (
-            <React.Fragment key={key}>
-              {renderJsonField(key, value, 1)}
-              {index < arr.length - 1 && (
-                <span className={SYNTAX_COLORS.comma}>,</span>
-              )}
-            </React.Fragment>
-          ))}
+          {(() => {
+            const entries = Object.entries(data);
+            const sortedEntries = sortEntries(entries, FIELD_ORDER);
+            return sortedEntries.map(([key, value], index, arr) => (
+              <React.Fragment key={key}>
+                {renderJsonField(key, value, 1)}
+                {index < arr.length - 1 && (
+                  <span className={SYNTAX_COLORS.comma}>,</span>
+                )}
+              </React.Fragment>
+            ));
+          })()}
         </div>
         <div className={SYNTAX_COLORS.bracket}>{'}'}</div>
       </div>

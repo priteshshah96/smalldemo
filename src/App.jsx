@@ -192,11 +192,46 @@ const App = () => {
   };
 
   // Handle annotation removal with multi-span support
+  // Define the default structure
+  const DEFAULT_ARGUMENTS_STRUCTURE = {
+    Object: {
+      'Base Object': '',
+      'Base Modifier': '',
+      'Attached Object': '',
+      'Attached Modifier': ''
+    },
+    Agent: '',
+    Context: '',
+    Purpose: '',
+    Method: '',
+    Results: '',
+    Analysis: '',
+    Challenge: '',
+    Ethical: '',
+    Implications: '',
+    Contradictions: ''
+  };
+  
+  const EVENT_TYPES = [
+    'Background/Introduction',
+    'Methods/Approach',
+    'Results/Findings',
+    'Conclusions/Implications'
+  ];
+  
   const handleAnnotationRemove = (path) => {
     console.log('Removing annotation at path:', path);
     
     const newData = [...jsonData];
     const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
+    
+    // Handle event type summaries (e.g., Background/Introduction)
+    if (EVENT_TYPES.includes(path)) {
+      currentEvent[path] = '';
+      setJsonData([...newData]);
+      setLastSaved(new Date());
+      return;
+    }
     
     const pathParts = path.split('.');
     
@@ -211,28 +246,39 @@ const App = () => {
             : [currentEvent['Main Action']];
             
           mainAction.splice(index, 1);
-          
-          if (mainAction.length === 0) {
-            currentEvent['Main Action'] = '';
-          } else {
-            currentEvent['Main Action'] = mainAction.length === 1 ? mainAction[0] : mainAction;
-          }
+          currentEvent['Main Action'] = mainAction.length === 0 ? '' : 
+                                      mainAction.length === 1 ? mainAction[0] : mainAction;
         }
       } else {
         currentEvent['Main Action'] = '';
       }
       
-      setJsonData([...newData]); // Ensure state update
+      setJsonData([...newData]);
       setLastSaved(new Date());
       return;
     }
     
     // Handle Arguments
     if (pathParts[0] === 'Arguments') {
+      // Ensure Arguments exists with default structure
+      if (!currentEvent.Arguments) {
+        currentEvent.Arguments = {...DEFAULT_ARGUMENTS_STRUCTURE};
+      }
+      
       let current = currentEvent.Arguments;
       
       // Handle Object type arguments
       if (pathParts[1] === 'Object' && pathParts.length > 2) {
+        // Ensure Object exists with default structure
+        if (!current.Object) {
+          current.Object = {
+            'Base Object': '',
+            'Base Modifier': '',
+            'Attached Object': '',
+            'Attached Modifier': ''
+          };
+        }
+        
         const objectKey = pathParts[2];
         if (pathParts.length === 4) {
           // Handle array item deletion
@@ -243,22 +289,12 @@ const App = () => {
               : [current.Object[objectKey]];
               
             spans.splice(index, 1);
-            
-            if (spans.length === 0) {
-              delete current.Object[objectKey];
-              if (Object.keys(current.Object).length === 0) {
-                delete current.Object;
-              }
-            } else {
-              current.Object[objectKey] = spans.length === 1 ? spans[0] : spans;
-            }
+            current.Object[objectKey] = spans.length === 0 ? '' : 
+                                      spans.length === 1 ? spans[0] : spans;
           }
         } else {
-          // Handle entire Object property deletion
-          delete current.Object[pathParts[2]];
-          if (Object.keys(current.Object).length === 0) {
-            delete current.Object;
-          }
+          // Set to empty string instead of deleting
+          current.Object[objectKey] = '';
         }
       } else {
         // Handle regular Arguments
@@ -272,43 +308,32 @@ const App = () => {
               : [current[argKey]];
               
             spans.splice(index, 1);
-            
-            if (spans.length === 0) {
-              delete current[argKey];
-            } else {
-              current[argKey] = spans.length === 1 ? spans[0] : spans;
-            }
+            current[argKey] = spans.length === 0 ? '' : 
+                             spans.length === 1 ? spans[0] : spans;
           }
         } else {
-          // Handle entire argument deletion
-          delete current[argKey];
+          // Set to empty string instead of deleting
+          current[argKey] = '';
         }
-      }
-      
-      // Clean up empty Arguments object
-      if (Object.keys(currentEvent.Arguments).length === 0) {
-        delete currentEvent.Arguments;
       }
     }
     
-    setJsonData([...newData]); // Ensure state update
+    setJsonData([...newData]);
     setLastSaved(new Date());
   };
 
-  // Handle summary change
-  const handleSummaryChange = (event) => {
-    const newData = [...jsonData];
-    const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
-    const eventType = Object.keys(currentEvent).find(key => 
-      ['Background/Introduction', 'Methods/Approach', 'Results/Findings', 'Conclusions/Implications'].includes(key)
-    );
-    if (eventType) {
-      currentEvent[eventType] = event.target.value;
-    }
-    setJsonData(newData);
-    setLastSaved(new Date());
-  };
-
+const handleSummaryChange = (event) => {
+  const newData = [...jsonData];
+  const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
+  const eventType = Object.keys(currentEvent).find(key => 
+    ['Background/Introduction', 'Methods/Approach', 'Results/Findings', 'Conclusions/Implications'].includes(key)
+  );
+  if (eventType) {
+    currentEvent[eventType] = event.target.value;
+  }
+  setJsonData(newData);
+  setLastSaved(new Date());
+};
   // Get annotations for highlighting
   const getAnnotationsForHighlighting = () => {
     if (!jsonData) return [];

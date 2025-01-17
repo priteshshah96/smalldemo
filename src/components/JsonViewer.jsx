@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 
-// Field ordering configuration
+// Field ordering constants
 const FIELD_ORDER = [
   'Background/Introduction',
   'Methods/Approach',
@@ -12,11 +12,10 @@ const FIELD_ORDER = [
   'Arguments'
 ];
 
-// Arguments field ordering
 const ARGUMENTS_ORDER = [
   'Agent',
   'Object',
-  'Context',
+  'Context',  
   'Purpose',
   'Method',
   'Results',
@@ -27,7 +26,13 @@ const ARGUMENTS_ORDER = [
   'Contradictions'
 ];
 
-// Event type fields that can have summaries
+const OBJECT_FIELD_ORDER = [
+  'Base Object',
+  'Base Modifier',
+  'Attached Object',
+  'Attached Modifier'
+];
+
 const EVENT_TYPES = [
   'Background/Introduction',
   'Methods/Approach',
@@ -35,6 +40,7 @@ const EVENT_TYPES = [
   'Conclusions/Implications'
 ];
 
+// UI Colors
 const SYNTAX_COLORS = {
   key: 'text-yellow-300 font-medium',
   string: 'text-emerald-300',
@@ -44,24 +50,10 @@ const SYNTAX_COLORS = {
 };
 
 const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
-  const [expandedPaths, setExpandedPaths] = useState(new Set([
-    'Arguments', 
-    'Arguments.Object',
-    'Main Action',
-    'Arguments.Agent',
-    'Arguments.Context',
-    'Arguments.Purpose',
-    'Arguments.Method',
-    'Arguments.Results',
-    'Arguments.Analysis',
-    'Arguments.Challenge',
-    'Arguments.Ethical',
-    'Arguments.Implications',
-    'Arguments.Contradictions'
-  ]));
+  const [expandedPaths, setExpandedPaths] = useState(new Set(['Arguments', 'Arguments.Object']));
 
   useEffect(() => {
-    const pathsToExpand = new Set([...expandedPaths]);
+    const pathsToExpand = new Set(['Arguments', 'Arguments.Object']);
     
     const findPathsWithValues = (obj, currentPath = '') => {
       if (!obj) return;
@@ -69,15 +61,17 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
       Object.entries(obj).forEach(([key, value]) => {
         const newPath = currentPath ? `${currentPath}.${key}` : key;
         
-        // Always expand Arguments and Main Action paths
-        if (newPath.startsWith('Arguments.') || newPath === 'Arguments' || newPath === 'Main Action') {
-          pathsToExpand.add(newPath);
-        }
-        
         if (value && typeof value === 'string' && value !== '') {
           pathsToExpand.add(newPath);
+          let parentPath = newPath.split('.').slice(0, -1).join('.');
+          while (parentPath) {
+            pathsToExpand.add(parentPath);
+            parentPath = parentPath.split('.').slice(0, -1).join('.');
+          }
         } else if (typeof value === 'object' && value !== null) {
-          pathsToExpand.add(newPath);
+          if (Object.values(value).some(v => v && v !== '')) {
+            pathsToExpand.add(newPath);
+          }
           findPathsWithValues(value, newPath);
         }
       });
@@ -87,10 +81,14 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
     setExpandedPaths(pathsToExpand);
   }, [data]);
 
+  const isArgumentSection = (path) => {
+    return path === 'Arguments' || 
+           path.startsWith('Arguments.') || 
+           path === 'Main Action';
+  };
+
   const togglePath = (path) => {
-    if (path.startsWith('Arguments.') || path === 'Arguments' || path === 'Main Action') {
-      return;
-    }
+    if (isArgumentSection(path)) return;
     
     setExpandedPaths(prev => {
       const newSet = new Set(prev);
@@ -103,40 +101,63 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
     });
   };
 
+  const handleDelete = (path, e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onRemoveAnnotation(path);
+  };
+
   const shouldCollapse = (key, value) => {
     return typeof value === 'object' && value !== null && Object.keys(value).length > 0;
   };
 
-  const handleDelete = (path, e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    
-    // Check if the path is an event type with summary
-    if (EVENT_TYPES.includes(path)) {
-      onRemoveAnnotation(path);
-      return;
+  const renderValue = (value, path) => {
+    if (Array.isArray(value)) {
+      const nonEmptyValues = value.filter(item => item && item !== '');
+      if (nonEmptyValues.length === 0) {
+        return <span className={SYNTAX_COLORS.string}>""</span>;
+      }
+      return (
+        <div className="flex flex-col">
+          {nonEmptyValues.map((item, index) => (
+            <div key={index} className="flex items-center group py-0.5">
+              <span className={SYNTAX_COLORS.string}>"{item}"</span>
+              <button
+                onClick={(e) => handleDelete(`${path}.${index}`, e)}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
+                         transition-opacity focus:opacity-100 focus:outline-none
+                         focus:ring-1 focus:ring-red-500"
+                aria-label={`Remove annotation`}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+              </button>
+              {index < nonEmptyValues.length - 1 && (
+                <span className={SYNTAX_COLORS.comma}>, </span>
+              )}
+            </div>
+          ))}
+        </div>
+      );
     }
     
-    const pathArray = path.split('.');
-    const formattedPath = pathArray.map(part => 
-      !isNaN(part) ? parseInt(part) : part
-    ).join('.');
-    
-    if (formattedPath && onRemoveAnnotation) {
-      onRemoveAnnotation(formattedPath);
-      
-      setExpandedPaths(prev => {
-        const newPaths = new Set(prev);
-        const parentPath = pathArray.slice(0, -1).join('.');
-        if (parentPath && newPaths.has(parentPath)) {
-          newPaths.delete(parentPath);
-          setTimeout(() => {
-            setExpandedPaths(current => new Set([...current, parentPath]));
-          }, 0);
-        }
-        return newPaths;
-      });
+    if (typeof value === 'string' && value) {
+      return (
+        <div className="flex items-center group">
+          <span className={SYNTAX_COLORS.string}>"{value}"</span>
+          <button
+            onClick={(e) => handleDelete(path, e)}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
+                     transition-opacity focus:opacity-100 focus:outline-none
+                     focus:ring-1 focus:ring-red-500"
+            aria-label={`Remove annotation`}
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+          </button>
+        </div>
+      );
     }
+
+    return <span className={SYNTAX_COLORS.string}>"{value}"</span>;
   };
 
   const sortEntries = (entries, orderArray) => {
@@ -150,81 +171,62 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
     });
   };
 
-  const renderJsonField = (key, value, depth = 0, path = '') => {
+  const renderField = (key, value, depth = 0, path = '') => {
     const indent = '  '.repeat(depth);
-    const isCollapsible = shouldCollapse(key, value);
+    const isCollapsible = shouldCollapse(key, value) && !Array.isArray(value);
     const currentPath = path ? `${path}.${key}` : key;
-    const isExpanded = expandedPaths.has(currentPath);
-    const isArgumentsSection = currentPath.startsWith('Arguments.') || currentPath === 'Arguments' || currentPath === 'Main Action';
+    const isExpanded = isArgumentSection(currentPath) ? true : expandedPaths.has(currentPath);
 
     if (isCollapsible) {
       return (
         <div key={key} className="group font-mono">
-          <div 
-            className={`flex items-start ${!isArgumentsSection ? 'cursor-pointer' : ''} hover:bg-gray-800/50 rounded px-2 py-0.5 -mx-2
-                     focus-within:ring-1 focus-within:ring-blue-500 focus-within:outline-none`}
-            onClick={() => togglePath(currentPath)}
-            role="button"
-            tabIndex={0}
+          <div
+            className={`flex items-center group py-0.5 hover:bg-gray-800/50 rounded px-2 -mx-2
+                     focus-within:ring-1 focus-within:ring-blue-500 focus-within:outline-none
+                     ${isArgumentSection(currentPath) ? 'cursor-default' : 'cursor-pointer'}`}
+            onClick={() => !isArgumentSection(currentPath) && togglePath(currentPath)}
+            role={isArgumentSection(currentPath) ? undefined : "button"}
+            tabIndex={isArgumentSection(currentPath) ? undefined : 0}
             aria-expanded={isExpanded}
-            aria-label={`Toggle ${key} section`}
-            onKeyPress={(e) => e.key === 'Enter' && togglePath(currentPath)}
+            onKeyPress={(e) => !isArgumentSection(currentPath) && e.key === 'Enter' && togglePath(currentPath)}
           >
-            <span className="text-gray-400 w-4 mt-1">
+            <span className="text-gray-400 w-4">
               {isExpanded ? 
-                <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" /> : 
-                <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                <ChevronDown className="w-3.5 h-3.5" /> : 
+                <ChevronRight className="w-3.5 h-3.5" />
               }
             </span>
             <span className={SYNTAX_COLORS.key}>{indent}"{key}"</span>
             <span className={SYNTAX_COLORS.colon}>: </span>
             <span className={SYNTAX_COLORS.bracket}>{Array.isArray(value) ? '[' : '{'}</span>
           </div>
-          <div className={`ml-4 ${isExpanded ? 'block' : 'hidden'}`}>
-            {Array.isArray(value) 
-              ? value.map((item, index) => (
-                  <div key={index} className="group">
-                    {typeof item === 'object' 
-                      ? renderJsonField(index, item, depth + 1, currentPath)
-                      : (
-                        <div className="flex items-center gap-2 group py-0.5">
-                          <span className={SYNTAX_COLORS.string}>{indent}  "{item}"</span>
-                          <button
-                            onClick={(e) => handleDelete(`${currentPath}.${index}`, e)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded
-                                     transition-opacity focus:opacity-100 focus:outline-none
-                                     focus:ring-1 focus:ring-red-500"
-                            aria-label={`Remove ${item} annotation`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-                          </button>
-                          {index < value.length - 1 && (
-                            <span className={SYNTAX_COLORS.comma}>,</span>
-                          )}
-                        </div>
-                      )
-                    }
-                  </div>
-                ))
-              : (() => {
-                  let entries = Object.entries(value);
-                  if (path === '') {
-                    entries = sortEntries(entries, FIELD_ORDER);
-                  } else if (path === 'Arguments') {
-                    entries = sortEntries(entries, ARGUMENTS_ORDER);
-                  }
-                  return entries.map(([k, v], index, arr) => (
-                    <div key={k}>
-                      {renderJsonField(k, v, depth + 1, currentPath)}
-                      {index < arr.length - 1 && (
-                        <span className={SYNTAX_COLORS.comma}>,</span>
-                      )}
-                    </div>
-                  ));
-                })()
-            }
+
+          <div className={isExpanded ? 'ml-4' : 'hidden'}>
+            {Array.isArray(value) ? (
+              renderValue(value, currentPath)
+            ) : (
+              (() => {
+                let entries = Object.entries(value);
+                if (path === '') {
+                  entries = sortEntries(entries, FIELD_ORDER);
+                } else if (path === 'Arguments') {
+                  entries = sortEntries(entries, ARGUMENTS_ORDER);
+                } else if (path === 'Arguments.Object') {
+                  entries = sortEntries(entries, OBJECT_FIELD_ORDER);
+                }
+                return entries.map(([k, v], index) => (
+                  <React.Fragment key={k}>
+                    {renderField(k, v, depth + 1, currentPath)}
+                    {index < entries.length - 1 && (
+                      <span className={SYNTAX_COLORS.comma}>,</span>
+                    )}
+                  </React.Fragment>
+                ));
+              })()
+            )}
           </div>
-          <div className={isExpanded ? 'block py-0.5' : 'hidden'}>
+
+          <div className={isExpanded ? 'py-0.5' : 'hidden'}>
             <span className={SYNTAX_COLORS.bracket}>
               {indent}{Array.isArray(value) ? ']' : '}'}
             </span>
@@ -237,20 +239,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
       <div key={key} className="flex items-center group py-0.5 font-mono">
         <span className={SYNTAX_COLORS.key}>{indent}"{key}"</span>
         <span className={SYNTAX_COLORS.colon}>: </span>
-        <span className={SYNTAX_COLORS.string}>
-          {typeof value === 'string' ? `"${value}"` : JSON.stringify(value)}
-        </span>
-        {typeof value === 'string' && (EVENT_TYPES.includes(key) || value !== '') && (
-          <button
-            onClick={(e) => handleDelete(key, e)}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
-                     transition-opacity focus:opacity-100 focus:outline-none
-                     focus:ring-1 focus:ring-red-500"
-            aria-label={`Remove ${key} annotation`}
-          >
-            <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-          </button>
-        )}
+        {renderValue(value, currentPath)}
       </div>
     );
   };
@@ -271,7 +260,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
       </div>
 
       <div 
-        className="p-4 text-sm overflow-auto max-h-[calc(100vh-24rem)] font-mono
+        className="p-4 text-sm overflow-auto max-h-[calc(100vh-24rem)]
                    scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900"
         role="region"
         aria-label="JSON content viewer"
@@ -279,12 +268,11 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
         <div className={SYNTAX_COLORS.bracket}>{'{'}</div>
         <div className="ml-4">
           {(() => {
-            const entries = Object.entries(data);
-            const sortedEntries = sortEntries(entries, FIELD_ORDER);
-            return sortedEntries.map(([key, value], index, arr) => (
+            const entries = sortEntries(Object.entries(data), FIELD_ORDER);
+            return entries.map(([key, value], index) => (
               <React.Fragment key={key}>
-                {renderJsonField(key, value, 1)}
-                {index < arr.length - 1 && (
+                {renderField(key, value, 1)}
+                {index < entries.length - 1 && (
                   <span className={SYNTAX_COLORS.comma}>,</span>
                 )}
               </React.Fragment>

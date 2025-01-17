@@ -21,6 +21,9 @@ const HIGHLIGHT_COLORS = {
   'Contradictions': 'bg-rose-200 hover:bg-rose-300'
 };
 
+// Style for persistent text selection
+const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-blue-200 border rounded';
+
 // Keyboard shortcuts mapping
 const KEYBOARD_SHORTCUTS = {
   'Main_Action': '1',
@@ -72,61 +75,55 @@ const TextAnnotationPanel = ({
   const [hoveredAnnotation, setHoveredAnnotation] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [lastSelection, setLastSelection] = useState(null);
+  const [selectionActive, setSelectionActive] = useState(false);
 
   // Check if Main Action exists
   const hasMainAction = annotations.some(annotation => annotation.type === 'Main_Action');
 
   // Clear selection when event type changes
   useEffect(() => {
-    if (selectedText) {
+    if (selectedText || lastSelection) {
       onTextSelect(null);
       window.getSelection()?.removeAllRanges();
+      setLastSelection(null);
+      setSelectionActive(false);
     }
   }, [eventType]);
 
   // Handle keyboard shortcuts and navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if user is typing in an input or textarea
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       const key = e.key.toLowerCase();
 
-      // Handle ESC key to clear selection
-      if (e.key === 'Escape' && selectedText) {
+      if (e.key === 'Escape') {
         e.preventDefault();
         onTextSelect(null);
         window.getSelection()?.removeAllRanges();
+        setLastSelection(null);
+        setSelectionActive(false);
         setStatusMessage('Selection cleared');
         return;
       }
 
-      // Handle tab navigation between buttons
-      if (e.key === 'Tab') {
-        return; // Let default tab behavior work
-      }
-
-      // Handle keyboard shortcuts for annotation types
-      if (selectedText) {
-        const button = ANNOTATION_BUTTONS.find(btn => KEYBOARD_SHORTCUTS[btn.type] === key);
-        if (button) {
-          e.preventDefault();
-          if (button.type === 'Main_Action' || hasMainAction) {
-            onAnnotationSelect(button.type);
-            setStatusMessage(`Applied ${button.label} annotation`);
-          } else {
-            setShowToast(true);
-            setStatusMessage('Please annotate Main Action first');
-          }
+      const button = ANNOTATION_BUTTONS.find(btn => KEYBOARD_SHORTCUTS[btn.type] === key);
+      if (button && (lastSelection || selectedText)) {
+        e.preventDefault();
+        if (button.type === 'Main_Action' || hasMainAction) {
+          handleAnnotationClick(button.type);
+        } else {
+          setShowToast(true);
+          setStatusMessage('Please annotate Main Action first');
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedText, onAnnotationSelect, hasMainAction]);
+  }, [selectedText, lastSelection, onAnnotationSelect, hasMainAction]);
 
-  // Clear status message after 3 seconds
   useEffect(() => {
     if (statusMessage) {
       const timer = setTimeout(() => setStatusMessage(''), 3000);
@@ -135,51 +132,54 @@ const TextAnnotationPanel = ({
   }, [statusMessage]);
 
   const handleMouseUp = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const selection = window.getSelection();
     const selectedText = selection.toString().trim();
     
-    if (selectedText) {
+    if (selectedText && textRef.current) {
       const range = selection.getRangeAt(0);
-      const rangeRect = range.getBoundingClientRect();
+      
+      // Get the text content up to the selection start
+      const preSelectionRange = range.cloneRange();
+      preSelectionRange.selectNodeContents(textRef.current);
+      preSelectionRange.setEnd(range.startContainer, range.startOffset);
+      const start = preSelectionRange.toString().length;
+      
+      const selectionInfo = {
+        text: selectedText,
+        position: range.getBoundingClientRect(),
+        start: start,
+        end: start + selectedText.length
+      };
 
-      const textContent = textRef.current.textContent;
-      const selectedStart = textContent.indexOf(selectedText);
-      const selectedEnd = selectedStart + selectedText.length;
-
-      // Check for overlapping annotations
+      // Check for overlapping with existing annotations
       const isOverlapping = annotations.some(annotation => {
         const hasOverlap = (
-          (selectedStart >= annotation.start && selectedStart < annotation.end) ||
-          (selectedEnd > annotation.start && selectedEnd <= annotation.end) ||
-          (selectedStart <= annotation.start && selectedEnd >= annotation.end)
+          (start >= annotation.start && start < annotation.end) ||
+          (start + selectedText.length > annotation.start && start + selectedText.length <= annotation.end) ||
+          (start <= annotation.start && start + selectedText.length >= annotation.end)
         );
         
-        const isAdjacent = (
-          selectedStart === annotation.end ||
-          selectedEnd === annotation.start
-        );
-
-        return hasOverlap && !isAdjacent;
+        return hasOverlap;
       });
 
       if (isOverlapping) {
         setShowToast(true);
         setStatusMessage('Selection overlaps with existing annotation. Please select different text.');
+        selection.removeAllRanges();
+        setSelectionActive(false);
         return;
       }
 
-      onTextSelect({
-        text: selectedText,
-        position: {
-          top: rangeRect.top + window.scrollY,
-          left: rangeRect.left + window.scrollX,
-          width: rangeRect.width
-        },
-        start: selectedStart,
-        end: selectedEnd
-      });
-
+      setLastSelection(selectionInfo);
+      onTextSelect(selectionInfo);
+      setSelectionActive(true);
       setStatusMessage('Text selected. Choose an annotation type.');
+      
+      // Prevent selection from being cleared
+      e.preventDefault();
     }
   };
 
@@ -190,29 +190,14 @@ const TextAnnotationPanel = ({
       return;
     }
 
-    const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
-    
-    if (selectedText) {
-      const range = selection.getRangeAt(0);
-      const rangeRect = range.getBoundingClientRect();
-      
-      const textContent = textRef.current.textContent;
-      const selectedStart = textContent.indexOf(selectedText);
-      
-      onTextSelect({
-        text: selectedText,
-        position: {
-          top: rangeRect.top + window.scrollY,
-          left: rangeRect.left + window.scrollX,
-          width: rangeRect.width
-        },
-        start: selectedStart,
-        end: selectedStart + selectedText.length
-      });
-
+    const currentSelection = lastSelection || selectedText;
+    if (currentSelection) {
       onAnnotationSelect(annotationType);
       setStatusMessage(`Applied ${annotationType.replace('_', ' ')} annotation`);
+      window.getSelection()?.removeAllRanges();
+      setLastSelection(null);
+      setSelectionActive(false);
+      onTextSelect(null);
     }
   };
 
@@ -247,12 +232,21 @@ const TextAnnotationPanel = ({
     let lastIndex = 0;
     const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
     const result = [];
+    const currentSelection = lastSelection || selectedText;
 
     sortedAnnotations.forEach((annotation, index) => {
       if (annotation.start > lastIndex) {
+        const segment = text.slice(lastIndex, annotation.start);
+        const isSelected = currentSelection && selectionActive &&
+                         currentSelection.start <= lastIndex &&
+                         currentSelection.end >= annotation.start;
+        
         result.push(
-          <span key={`text-${index}`}>
-            {text.slice(lastIndex, annotation.start)}
+          <span 
+            key={`text-${index}`}
+            className={isSelected ? PERSISTENT_SELECTION_STYLE : ''}
+          >
+            {segment}
           </span>
         );
       }
@@ -269,9 +263,17 @@ const TextAnnotationPanel = ({
     });
 
     if (lastIndex < text.length) {
+      const segment = text.slice(lastIndex);
+      const isSelected = currentSelection && selectionActive &&
+                       currentSelection.start <= lastIndex &&
+                       currentSelection.end >= text.length;
+      
       result.push(
-        <span key="text-end">
-          {text.slice(lastIndex)}
+        <span 
+          key="text-end"
+          className={isSelected ? PERSISTENT_SELECTION_STYLE : ''}
+        >
+          {segment}
         </span>
       );
     }
@@ -279,25 +281,8 @@ const TextAnnotationPanel = ({
     return result;
   };
 
-  const SelectedTextPrompt = () => (
-    selectedText && (
-      <div 
-        className="mb-4 p-3 bg-blue-100 rounded-lg" 
-        role="status"
-        aria-live="polite"
-      >
-        <span className="text-sm text-blue-800 font-medium">
-          Current selected text: <strong>"{selectedText?.text}"</strong>
-          <br />
-          <span className="text-xs text-blue-600">Press ESC to clear selection</span>
-        </span>
-      </div>
-    )
-  );
-
   return (
     <div role="application" aria-label="Text Annotation Panel">
-      {/* Toast Notification */}
       {showToast && (
         <Toast 
           message={statusMessage} 
@@ -305,28 +290,28 @@ const TextAnnotationPanel = ({
         />
       )}
 
-      {/* Status Messages */}
-      <div 
-        aria-live="polite" 
-        className="sr-only"
-      >
+      <div aria-live="polite" className="sr-only">
         {statusMessage}
       </div>
 
       {!hasMainAction && (
-        <div 
-          className="mb-4 p-3 bg-yellow-100 rounded-lg border border-yellow-200"
-          role="alert"
-        >
+        <div className="mb-4 p-3 bg-yellow-100 rounded-lg border border-yellow-200" role="alert">
           <span className="text-sm text-yellow-800 font-medium">
             ⚠️ Please annotate the Main Action first before adding other annotations
           </span>
         </div>
       )}
       
-      <SelectedTextPrompt />
+      {(selectedText || lastSelection) && (
+        <div className="mb-4 p-3 bg-blue-100 rounded-lg" role="status" aria-live="polite">
+          <span className="text-sm text-blue-800 font-medium">
+            Current selected text: <strong>"{(selectedText || lastSelection)?.text}"</strong>
+            <br />
+            <span className="text-xs text-blue-600">Press ESC to clear selection</span>
+          </span>
+        </div>
+      )}
 
-      {/* Text Content */}
       <div 
         ref={textRef}
         className="prose max-w-none text-gray-800 leading-relaxed select-text mb-6"
@@ -339,12 +324,8 @@ const TextAnnotationPanel = ({
         {renderHighlightedText()}
       </div>
 
-      {/* Annotation Buttons */}
       <div className="border-t border-gray-200 pt-4">
-        <h3 
-          className="text-sm font-medium text-gray-700 mb-3" 
-          id="annotation-buttons-label"
-        >
+        <h3 className="text-sm font-medium text-gray-700 mb-3" id="annotation-buttons-label">
           Select text and choose annotation type
           <br />
           <span className="text-xs text-gray-500">

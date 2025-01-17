@@ -14,6 +14,42 @@ import TextAnnotationPanel from './components/TextAnnotationPanel';
 import JsonViewer from './components/JsonViewer';
 import TutorialDialog from './components/TutorialDialog';
 import WarningBanner from './components/WarningBanner';
+
+// Constants
+const DEFAULT_EVENT_STRUCTURE = {
+  'Background/Introduction': '',
+  'Methods/Approach': '',
+  'Results/Findings': '',
+  'Conclusions/Implications': '',
+  'Text': '',
+  'Main Action': '',
+  'Arguments': {
+    'Agent': '',
+    'Object': {
+      'Base Object': '',
+      'Base Modifier': '',
+      'Attached Object': '',
+      'Attached Modifier': ''
+    },
+    'Context': '',
+    'Purpose': '',
+    'Method': '',
+    'Results': '',
+    'Analysis': '',
+    'Challenge': '',
+    'Ethical': '',
+    'Implications': '',
+    'Contradictions': ''
+  }
+};
+
+const EVENT_TYPES = [
+  'Background/Introduction',
+  'Methods/Approach',
+  'Results/Findings',
+  'Conclusions/Implications'
+];
+
 const App = () => {
   // Core state
   const [jsonData, setJsonData] = useState(null);
@@ -25,98 +61,40 @@ const App = () => {
   const [lastSaved, setLastSaved] = useState(null);
   const [isAbstractOpen, setIsAbstractOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [originalFileName, setOriginalFileName] = useState('');
 
   // Helper function to open annotation guide PDF
   const openAnnotationGuide = () => {
     window.open('/docs/annotation_guide.pdf', '_blank');
   };
 
+  // Calculate total progress
+  const calculateProgress = () => {
+    if (!jsonData) return 0;
+    const totalEvents = jsonData.reduce((sum, paper) => sum + paper.events.length, 0);
+    const currentTotalEvents = jsonData.slice(0, currentPaperIndex).reduce((sum, paper) => sum + paper.events.length, 0);
+    return Math.min(((currentTotalEvents + currentEventIndex + 1) / totalEvents) * 100, 100);
+  };
+
   // Handle Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (selectedText) {
-          setSelectedText(null);
-        }
-        if (showTutorial) {
-          setShowTutorial(false);
-        }
+        setSelectedText(null);
+        setShowTutorial(false);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedText, showTutorial]);
-  // File Upload UI
-  const FileUploadView = () => (
-    <div 
-      className={`min-h-screen bg-gray-50 p-8 flex items-center justify-center
-                 ${isFileDropActive ? 'bg-blue-50' : ''}`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setIsFileDropActive(true);
-      }}
-      onDragLeave={() => setIsFileDropActive(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsFileDropActive(false);
-        const file = e.dataTransfer.files[0];
-        if (file) {
-          handleFileInput({ target: { files: [file] } });
-        }
-      }}
-    >
-      <div className="max-w-xl w-full">
-        <div className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors
-                       ${isFileDropActive ? 'border-blue-500 bg-blue-100' : 'border-gray-300'}`}>
-          <Upload className="w-16 h-16 mx-auto text-gray-400 mb-4" aria-hidden="true" />
-          <h2 className="text-xl font-semibold mb-2">Upload Annotation File</h2>
-          <p className="text-gray-500 mb-4">Drag and drop your JSON file here or click to browse</p>
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleFileInput}
-            className="hidden"
-            id="file-upload"
-          />
-          <label
-            htmlFor="file-upload"
-            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg 
-                     hover:bg-blue-700 cursor-pointer transition-colors"
-          >
-            Browse Files
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Error UI
-  const ErrorView = () => (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-center p-4">
-      <div className="bg-white p-8 rounded-xl shadow-xl max-w-md w-full">
-        <div className="flex items-center gap-3 mb-4">
-          <X className="w-8 h-8 text-red-500" aria-hidden="true" />
-          <h2 className="text-red-600 text-xl font-bold">Error Occurred</h2>
-        </div>
-        <p className="text-gray-700 mb-6">{error}</p>
-        <button
-          onClick={() => setError('')}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 
-                   transition-colors duration-200 flex items-center justify-center gap-2"
-        >
-          <span>Try Again</span>
-          <ChevronRight className="w-5 h-5" aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  );
+  }, []);
 
   // Handle file input
   const handleFileInput = async (event) => {
     const file = event.target.files[0];
     if (file) {
       try {
+        setOriginalFileName(file.name.replace('.json', ''));
         const text = await file.text();
         const data = JSON.parse(text);
         validateAndSetData(data);
@@ -126,6 +104,7 @@ const App = () => {
     }
   };
 
+  // Validate and set data with proper structure
   const validateAndSetData = (data) => {
     if (!Array.isArray(data)) {
       setError('Invalid format: Expected an array of papers');
@@ -142,7 +121,59 @@ const App = () => {
       return;
     }
 
-    setJsonData(data);
+    // Initialize proper structure for each event
+    const structuredData = data.map(paper => ({
+      ...paper,
+      events: paper.events.map(event => {
+        // Find which event type this is
+        const eventType = EVENT_TYPES.find(type => event[type] !== undefined);
+        
+        // Create base structure WITHOUT event types
+        const baseStructure = {
+          Text: event.Text || '',
+          'Main Action': event['Main Action'] || '',
+          Arguments: {
+            Agent: '',
+            Object: {
+              'Base Object': '',
+              'Base Modifier': '',
+              'Attached Object': '',
+              'Attached Modifier': ''
+            },
+            Context: '',
+            Purpose: '',
+            Method: '',
+            Results: '',
+            Analysis: '',
+            Challenge: '',
+            Ethical: '',
+            Implications: '',
+            Contradictions: ''
+          }
+        };
+
+        // Only add the specific event type that's present
+        if (eventType) {
+          baseStructure[eventType] = event[eventType] || '';
+        }
+
+        // Handle Arguments structure if present
+        if (event.Arguments) {
+          baseStructure.Arguments = {
+            ...baseStructure.Arguments,
+            ...event.Arguments,
+            Object: {
+              ...baseStructure.Arguments.Object,
+              ...(event.Arguments.Object || {})
+            }
+          };
+        }
+
+        return baseStructure;
+      })
+    }));
+
+    setJsonData(structuredData);
     setError('');
   };
 
@@ -151,14 +182,36 @@ const App = () => {
     setSelectedText(selection);
   };
 
-  // Handle annotation selection with multiple span support
+  // Handle annotation selection
   const handleAnnotationSelect = (annotationType) => {
     if (!selectedText || !jsonData) return;
 
     const newData = [...jsonData];
     const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
+    
+    // Ensure Arguments structure exists
+    if (!currentEvent.Arguments) {
+      currentEvent.Arguments = {
+        Agent: '',
+        Object: {
+          'Base Object': '',
+          'Base Modifier': '',
+          'Attached Object': '',
+          'Attached Modifier': ''
+        },
+        Context: '',
+        Purpose: '',
+        Method: '',
+        Results: '',
+        Analysis: '',
+        Challenge: '',
+        Ethical: '',
+        Implications: '',
+        Contradictions: ''
+      };
+    }
 
-    // Function to handle array of spans
+    // Helper function to handle array of spans
     const addSpanToArray = (existingValue, newSpan) => {
       if (!existingValue) return [newSpan];
       if (typeof existingValue === 'string') return [existingValue, newSpan];
@@ -167,21 +220,27 @@ const App = () => {
 
     if (annotationType.startsWith('Object.')) {
       const [_, subType] = annotationType.split('.');
-      if (!currentEvent.Arguments) {
-        currentEvent.Arguments = {};
+      const objectKey = subType.replace('_', ' ');
+      
+      // Initialize Arguments.Object if it doesn't exist or is a string
+      if (!currentEvent.Arguments.Object || typeof currentEvent.Arguments.Object === 'string') {
+        currentEvent.Arguments.Object = {
+          'Base Object': '',
+          'Base Modifier': '',
+          'Attached Object': '',
+          'Attached Modifier': ''
+        };
       }
-      if (!currentEvent.Arguments.Object) {
-        currentEvent.Arguments.Object = {};
+
+      if (!currentEvent.Arguments.Object[objectKey]) {
+        currentEvent.Arguments.Object[objectKey] = selectedText.text;
+      } else {
+        currentEvent.Arguments.Object[objectKey] = 
+          addSpanToArray(currentEvent.Arguments.Object[objectKey], selectedText.text);
       }
-      currentEvent.Arguments.Object[subType.replace('_', ' ')] = 
-        addSpanToArray(currentEvent.Arguments.Object[subType.replace('_', ' ')], selectedText.text);
     } else if (annotationType === 'Main_Action') {
-      currentEvent['Main Action'] = 
-        addSpanToArray(currentEvent['Main Action'], selectedText.text);
+      currentEvent['Main Action'] = selectedText.text;
     } else {
-      if (!currentEvent.Arguments) {
-        currentEvent.Arguments = {};
-      }
       currentEvent.Arguments[annotationType] = 
         addSpanToArray(currentEvent.Arguments[annotationType], selectedText.text);
     }
@@ -191,149 +250,113 @@ const App = () => {
     setLastSaved(new Date());
   };
 
-  // Handle annotation removal with multi-span support
-  // Define the default structure
-  const DEFAULT_ARGUMENTS_STRUCTURE = {
-    Object: {
-      'Base Object': '',
-      'Base Modifier': '',
-      'Attached Object': '',
-      'Attached Modifier': ''
-    },
-    Agent: '',
-    Context: '',
-    Purpose: '',
-    Method: '',
-    Results: '',
-    Analysis: '',
-    Challenge: '',
-    Ethical: '',
-    Implications: '',
-    Contradictions: ''
-  };
-  
-  const EVENT_TYPES = [
-    'Background/Introduction',
-    'Methods/Approach',
-    'Results/Findings',
-    'Conclusions/Implications'
-  ];
-  
+  // Handle annotation removal
   const handleAnnotationRemove = (path) => {
-    console.log('Removing annotation at path:', path);
-    
     const newData = [...jsonData];
     const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
     
-    // Handle event type summaries (e.g., Background/Introduction)
     if (EVENT_TYPES.includes(path)) {
       currentEvent[path] = '';
-      setJsonData([...newData]);
-      setLastSaved(new Date());
-      return;
-    }
-    
-    const pathParts = path.split('.');
-    
-    // Handle Main Action directly
-    if (pathParts[0] === 'Main Action') {
-      if (pathParts.length === 2) {
-        // Handle array item deletion
-        const index = parseInt(pathParts[1]);
-        if (!isNaN(index)) {
-          const mainAction = Array.isArray(currentEvent['Main Action']) 
-            ? [...currentEvent['Main Action']]
-            : [currentEvent['Main Action']];
-            
-          mainAction.splice(index, 1);
-          currentEvent['Main Action'] = mainAction.length === 0 ? '' : 
-                                      mainAction.length === 1 ? mainAction[0] : mainAction;
-        }
-      } else {
-        currentEvent['Main Action'] = '';
-      }
-      
-      setJsonData([...newData]);
-      setLastSaved(new Date());
-      return;
-    }
-    
-    // Handle Arguments
-    if (pathParts[0] === 'Arguments') {
-      // Ensure Arguments exists with default structure
-      if (!currentEvent.Arguments) {
-        currentEvent.Arguments = {...DEFAULT_ARGUMENTS_STRUCTURE};
-      }
-      
-      let current = currentEvent.Arguments;
-      
-      // Handle Object type arguments
-      if (pathParts[1] === 'Object' && pathParts.length > 2) {
-        // Ensure Object exists with default structure
-        if (!current.Object) {
-          current.Object = {
+    } else if (path === 'Main Action') {
+      currentEvent['Main Action'] = '';
+    } else if (path.startsWith('Arguments.')) {
+      const pathParts = path.split('.');
+  
+      // Handle Object subfields (e.g., Arguments.Object.Base_Object)
+      if (path.startsWith('Arguments.Object.')) {
+        const objectKey = pathParts[2];  // e.g., "Base Object"
+        const itemIndex = parseInt(pathParts[3]);  // Array index if it exists
+  
+        // Always ensure Object has proper structure
+        if (!currentEvent.Arguments.Object || typeof currentEvent.Arguments.Object !== 'object') {
+          currentEvent.Arguments.Object = {
             'Base Object': '',
             'Base Modifier': '',
             'Attached Object': '',
             'Attached Modifier': ''
           };
         }
-        
-        const objectKey = pathParts[2];
-        if (pathParts.length === 4) {
-          // Handle array item deletion
-          const index = parseInt(pathParts[3]);
-          if (!isNaN(index) && current.Object[objectKey]) {
-            const spans = Array.isArray(current.Object[objectKey]) 
-              ? [...current.Object[objectKey]]
-              : [current.Object[objectKey]];
-              
-            spans.splice(index, 1);
-            current.Object[objectKey] = spans.length === 0 ? '' : 
-                                      spans.length === 1 ? spans[0] : spans;
+  
+        // Handle array item deletion or reset field
+        if (!isNaN(itemIndex)) {
+          let currentValue = currentEvent.Arguments.Object[objectKey];
+          if (Array.isArray(currentValue)) {
+            currentValue = currentValue.filter((_, i) => i !== itemIndex);
+            currentEvent.Arguments.Object[objectKey] = 
+              currentValue.length === 0 ? '' : 
+              currentValue.length === 1 ? currentValue[0] : currentValue;
           }
         } else {
-          // Set to empty string instead of deleting
-          current.Object[objectKey] = '';
+          currentEvent.Arguments.Object[objectKey] = '';
         }
       } else {
-        // Handle regular Arguments
-        const argKey = pathParts[1];
-        if (pathParts.length === 3) {
+        // Handle other Arguments fields
+        const argumentType = pathParts[1];
+        const index = parseInt(pathParts[2]);
+  
+        if (!isNaN(index)) {
           // Handle array item deletion
-          const index = parseInt(pathParts[2]);
-          if (!isNaN(index) && current[argKey]) {
-            const spans = Array.isArray(current[argKey]) 
-              ? [...current[argKey]]
-              : [current[argKey]];
-              
-            spans.splice(index, 1);
-            current[argKey] = spans.length === 0 ? '' : 
-                             spans.length === 1 ? spans[0] : spans;
+          let currentValue = currentEvent.Arguments[argumentType];
+          if (Array.isArray(currentValue)) {
+            currentValue = currentValue.filter((_, i) => i !== index);
+            currentEvent.Arguments[argumentType] = 
+              currentValue.length === 0 ? '' : 
+              currentValue.length === 1 ? currentValue[0] : currentValue;
           }
+        } else if (argumentType === 'Object') {
+          // Reset Object structure but keep it as an object
+          currentEvent.Arguments.Object = {
+            'Base Object': '',
+            'Base Modifier': '',
+            'Attached Object': '',
+            'Attached Modifier': ''
+          };
         } else {
-          // Set to empty string instead of deleting
-          current[argKey] = '';
+          // Reset simple argument field
+          currentEvent.Arguments[argumentType] = '';
         }
       }
+  
+      // Ensure Arguments structure always exists with proper shape
+      if (!currentEvent.Arguments) {
+        currentEvent.Arguments = {
+          Agent: '',
+          Object: {
+            'Base Object': '',
+            'Base Modifier': '',
+            'Attached Object': '',
+            'Attached Modifier': ''
+          },
+          Context: '',
+          Purpose: '',
+          Method: '',
+          Results: '',
+          Analysis: '',
+          Challenge: '',
+          Ethical: '',
+          Implications: '',
+          Contradictions: ''
+        };
+      }
     }
-    
+  
     setJsonData([...newData]);
     setLastSaved(new Date());
   };
 
-const handleSummaryChange = (event) => {
-  const newData = [...jsonData];
-  const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
-  const eventType = Object.keys(currentEvent).find(key => 
-    ['Background/Introduction', 'Methods/Approach', 'Results/Findings', 'Conclusions/Implications'].includes(key)
-  );
-  if (eventType) {
-    currentEvent[eventType] = event.target.value;
-  }
-  setJsonData(newData);
-  setLastSaved(new Date());
-};
+  // Handle summary change
+  const handleSummaryChange = (event) => {
+    const newData = [...jsonData];
+    const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
+    const eventType = EVENT_TYPES.find(type => currentEvent[type] !== undefined);
+    
+    if (eventType) {
+      currentEvent[eventType] = event.target.value;
+      setJsonData(newData);
+      setLastSaved(new Date());
+    }
+  };
+
   // Get annotations for highlighting
   const getAnnotationsForHighlighting = () => {
     if (!jsonData) return [];
@@ -341,7 +364,6 @@ const handleSummaryChange = (event) => {
     const currentEvent = jsonData[currentPaperIndex].events[currentEventIndex];
     const highlights = [];
 
-    // Helper function to process spans
     const processSpans = (spans, type, path) => {
       if (!spans) return;
       const spanArray = typeof spans === 'string' ? [spans] : spans;
@@ -360,10 +382,8 @@ const handleSummaryChange = (event) => {
       });
     };
 
-    // Process Main Action
     processSpans(currentEvent['Main Action'], 'Main_Action', 'Main Action');
 
-    // Process Arguments
     if (currentEvent.Arguments) {
       Object.entries(currentEvent.Arguments).forEach(([type, value]) => {
         if (type === 'Object') {
@@ -385,10 +405,9 @@ const handleSummaryChange = (event) => {
 
   // Handle JSON download
   const handleDownload = () => {
-  if (!jsonData || !jsonData[currentPaperIndex]) return;
-  
-    const originalName = jsonData[currentPaperIndex].paper_code || 'annotated_data';
-    const fileName = `${originalName}_annotated.json`;
+    if (!jsonData) return;
+    
+    const fileName = `${originalFileName || 'annotated_data'}_annotated.json`;
     const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -399,16 +418,24 @@ const handleSummaryChange = (event) => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-  // Shows appropriate view based on state
-  // Main render
-  if (error) return <ErrorView />;
-  if (!jsonData) return <FileUploadView />;
+
+  // Show appropriate view based on state
+  if (error) {
+    return <ErrorView error={error} onClose={() => setError('')} />;
+  }
+  
+  if (!jsonData) {
+    return (
+      <FileUploadView 
+        isFileDropActive={isFileDropActive}
+        setIsFileDropActive={setIsFileDropActive}
+        handleFileInput={handleFileInput}
+      />
+    );
+  }
 
   const currentEvent = jsonData[currentPaperIndex].events[currentEventIndex];
-  const eventType = Object.keys(currentEvent).find(key => 
-    ['Background/Introduction', 'Methods/Approach', 'Results/Findings', 'Conclusions/Implications'].includes(key)
-  );
-
+  const eventType = EVENT_TYPES.find(type => currentEvent[type] !== undefined);
   const isLastEvent = currentEventIndex === jsonData[currentPaperIndex].events.length - 1 &&
                      currentPaperIndex === jsonData.length - 1;
 
@@ -418,7 +445,6 @@ const handleSummaryChange = (event) => {
       
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-20">
-        {/* Warning Banner */}
         <WarningBanner />
         
         <div className="max-w-[95%] mx-auto p-4">
@@ -473,10 +499,7 @@ const handleSummaryChange = (event) => {
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden w-full">
             <div 
               className="h-full bg-blue-600 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${((currentPaperIndex * jsonData[currentPaperIndex].events.length + currentEventIndex) / 
-                (jsonData.length * jsonData[currentPaperIndex].events.length)) * 100}%` 
-              }}
+              style={{ width: `${calculateProgress()}%` }}
             />
           </div>
         </div>
@@ -485,7 +508,7 @@ const handleSummaryChange = (event) => {
       {/* Main content */}
       <main className="pt-24 pb-32 px-4">
         <div className="max-w-[95%] mx-auto space-y-6">
-          {/* Abstract Section - Full Width */}
+          {/* Abstract Section */}
           {jsonData[currentPaperIndex].abstract && (
             <div className="w-full bg-white rounded-xl shadow-lg">
               <button
@@ -532,6 +555,7 @@ const handleSummaryChange = (event) => {
                   onTextSelect={handleTextSelect}
                   onAnnotationSelect={handleAnnotationSelect}
                   selectedText={selectedText}
+                  key={`${currentPaperIndex}-${currentEventIndex}`}
                 />
               </div>
             </div>
@@ -615,5 +639,70 @@ const handleSummaryChange = (event) => {
     </div>
   );
 };
+
+// File Upload Component
+const FileUploadView = ({ isFileDropActive, setIsFileDropActive, handleFileInput }) => (
+  <div 
+    className={`min-h-screen bg-gray-50 p-8 flex items-center justify-center
+               ${isFileDropActive ? 'bg-blue-50' : ''}`}
+    onDragOver={(e) => {
+      e.preventDefault();
+      setIsFileDropActive(true);
+    }}
+    onDragLeave={() => setIsFileDropActive(false)}
+    onDrop={(e) => {
+      e.preventDefault();
+      setIsFileDropActive(false);
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        handleFileInput({ target: { files: [file] } });
+      }
+    }}
+  >
+    <div className="max-w-xl w-full">
+      <div className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors
+                     ${isFileDropActive ? 'border-blue-500 bg-blue-100' : 'border-gray-300'}`}>
+        <Upload className="w-16 h-16 mx-auto text-gray-400 mb-4" aria-hidden="true" />
+        <h2 className="text-xl font-semibold mb-2">Upload Annotation File</h2>
+        <p className="text-gray-500 mb-4">Drag and drop your JSON file here or click to browse</p>
+        <input
+          type="file"
+          accept=".json"
+          onChange={handleFileInput}
+          className="hidden"
+          id="file-upload"
+        />
+        <label
+          htmlFor="file-upload"
+          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg 
+                   hover:bg-blue-700 cursor-pointer transition-colors"
+        >
+          Browse Files
+        </label>
+      </div>
+    </div>
+  </div>
+);
+
+// Error Component
+const ErrorView = ({ error, onClose }) => (
+  <div className="min-h-screen bg-gray-50 flex justify-center items-center p-4">
+    <div className="bg-white p-8 rounded-xl shadow-xl max-w-md w-full">
+      <div className="flex items-center gap-3 mb-4">
+        <X className="w-8 h-8 text-red-500" aria-hidden="true" />
+        <h2 className="text-red-600 text-xl font-bold">Error Occurred</h2>
+      </div>
+      <p className="text-gray-700 mb-6">{error}</p>
+      <button
+        onClick={onClose}
+        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 
+                 transition-colors duration-200 flex items-center justify-center gap-2"
+      >
+        <span>Try Again</span>
+        <ChevronRight className="w-5 h-5" aria-hidden="true" />
+      </button>
+    </div>
+  </div>
+);
 
 export default App;

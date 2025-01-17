@@ -2,11 +2,12 @@ import React from 'react';
 import { X } from 'lucide-react';
 
 const TutorialDialog = ({ isOpen, onClose }) => {
+  const videoUrl = '/video/tutorial.mp4'; // Default video path from public folder
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[800px] mx-4 p-6 max-h-[80vh] overflow-y-auto mb-20">
+      <div className="bg-white rounded-xl w-[1024px] mx-4 p-6 max-h-[90vh] overflow-y-auto mb-10">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900">How to Use the Annotation Tool</h2>
@@ -19,7 +20,25 @@ const TutorialDialog = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Content - Made more compact */}
+        {/* Video Section */}
+        <div className="mb-6">
+          <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden">
+            <video 
+              className="w-full h-full"
+              controls
+              preload="metadata"
+              poster="/api/placeholder/800/450"
+            >
+              <source src={videoUrl} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            Watch the tutorial video above to see the annotation process in action.
+          </p>
+        </div>
+
+        {/* Written Instructions - Made more compact */}
         <div className="grid grid-cols-2 gap-4">
           {/* Left Column */}
           <div className="space-y-4">

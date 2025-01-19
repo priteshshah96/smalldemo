@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import Toast from './Toast';
 
 // Enhanced highlight colors with better contrast for accessibility
@@ -22,7 +22,7 @@ const HIGHLIGHT_COLORS = {
 };
 
 // Style for persistent text selection
-const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-blue-200 border rounded';
+const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-2 border-blue-300 rounded';
 
 // Keyboard shortcuts mapping
 const KEYBOARD_SHORTCUTS = {
@@ -61,7 +61,6 @@ const ANNOTATION_BUTTONS = [
   { type: 'Implications', label: 'Implications', baseColor: 'red', description: 'Future impact or significance' },
   { type: 'Contradictions', label: 'Contradictions', baseColor: 'rose', description: 'Inconsistencies or conflicts' }
 ];
-
 const TextAnnotationPanel = ({
   text,
   annotations,
@@ -77,109 +76,158 @@ const TextAnnotationPanel = ({
   const [showToast, setShowToast] = useState(false);
   const [lastSelection, setLastSelection] = useState(null);
   const [selectionActive, setSelectionActive] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
 
   // Check if Main Action exists
   const hasMainAction = annotations.some(annotation => annotation.type === 'Main_Action');
 
-  // Clear selection when event type changes
-  useEffect(() => {
-    if (selectedText || lastSelection) {
-      onTextSelect(null);
-      window.getSelection()?.removeAllRanges();
-      setLastSelection(null);
-      setSelectionActive(false);
+  // Clear selection helper function
+  const clearSelection = () => {
+    // Clear window selection first
+    const selection = window.getSelection();
+    if (selection) {
+      try {
+        selection.removeAllRanges();
+      } catch (e) {
+        selection.empty(); // Fallback for older browsers
+      }
     }
-  }, [eventType]);
+    
+    // Then clear component state
+    setSelectionActive(false);
+    setLastSelection(null);
+    onTextSelect(null);
+    setIsSelecting(false); // Also reset selecting state
+  };
 
-  // Handle keyboard shortcuts and navigation
+  // Handle keyboard shortcuts and escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-      const key = e.key.toLowerCase();
-
       if (e.key === 'Escape') {
-        e.preventDefault();
-        onTextSelect(null);
-        window.getSelection()?.removeAllRanges();
-        setLastSelection(null);
-        setSelectionActive(false);
-        setStatusMessage('Selection cleared');
+        e.preventDefault(); // Prevent any default ESC behavior
+        e.stopPropagation(); // Stop event bubbling
+        
+        // Only clear if there's actually a selection
+        if (selectedText || lastSelection || window.getSelection()?.toString().trim()) {
+          clearSelection();
+        }
         return;
       }
 
-      const button = ANNOTATION_BUTTONS.find(btn => KEYBOARD_SHORTCUTS[btn.type] === key);
-      if (button && (lastSelection || selectedText)) {
+      // Only handle shortcuts if there's an active selection
+      if (!selectedText && !lastSelection) return;
+
+      const key = e.key.toLowerCase();
+      const annotationType = Object.entries(KEYBOARD_SHORTCUTS).find(([_, shortcut]) => 
+        shortcut.toLowerCase() === key
+      )?.[0];
+
+      if (annotationType) {
         e.preventDefault();
-        if (button.type === 'Main_Action' || hasMainAction) {
-          handleAnnotationClick(button.type);
-        } else {
+        if (annotationType !== 'Main_Action' && !hasMainAction) {
           setShowToast(true);
           setStatusMessage('Please annotate Main Action first');
+          return;
         }
+        handleAnnotationClick(annotationType);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedText, lastSelection, onAnnotationSelect, hasMainAction]);
+    // Use capture phase to handle ESC before other handlers
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [selectedText, lastSelection, hasMainAction]);
 
+  // Clear selection when event type changes
   useEffect(() => {
-    if (statusMessage) {
-      const timer = setTimeout(() => setStatusMessage(''), 3000);
-      return () => clearTimeout(timer);
+    if (selectedText || lastSelection) {
+      clearSelection();
     }
-  }, [statusMessage]);
+  }, [eventType]);
 
-  const handleMouseUp = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Handle mouse down to track selection start
+  const handleMouseDown = (e) => {
+    if (!textRef.current?.contains(e.target)) {
+      e.preventDefault();
+      return;
+    }
+    setIsSelecting(true);
+  };
+
+  // Handle mouse move during selection
+  const handleMouseMove = (e) => {
+    if (!isSelecting) return;
     
+    if (!textRef.current?.contains(e.target)) {
+      clearSelection();
+      setShowToast(true);
+      setStatusMessage('Please keep your selection inside the text box.');
+    }
+  };
+
+  // Handle mouse up to end selection
+  const handleMouseUp = (e) => {
+    setIsSelecting(false);
+
     const selection = window.getSelection();
     const selectedText = selection.toString().trim();
-    
-    if (selectedText && textRef.current) {
-      const range = selection.getRangeAt(0);
-      
-      // Get the text content up to the selection start
-      const preSelectionRange = range.cloneRange();
-      preSelectionRange.selectNodeContents(textRef.current);
-      preSelectionRange.setEnd(range.startContainer, range.startOffset);
-      const start = preSelectionRange.toString().length;
-      
-      const selectionInfo = {
-        text: selectedText,
-        position: range.getBoundingClientRect(),
-        start: start,
-        end: start + selectedText.length
-      };
 
-      // Check for overlapping with existing annotations
-      const isOverlapping = annotations.some(annotation => {
-        const hasOverlap = (
-          (start >= annotation.start && start < annotation.end) ||
-          (start + selectedText.length > annotation.start && start + selectedText.length <= annotation.end) ||
-          (start <= annotation.start && start + selectedText.length >= annotation.end)
-        );
-        
-        return hasOverlap;
-      });
+    if (!selectedText) {
+      clearSelection();
+      return;
+    }
 
-      if (isOverlapping) {
-        setShowToast(true);
-        setStatusMessage('Selection overlaps with existing annotation. Please select different text.');
-        selection.removeAllRanges();
-        setSelectionActive(false);
-        return;
-      }
+    // Check if both start and end points are within the text panel
+    const isStartInPanel = textRef.current?.contains(selection.anchorNode);
+    const isEndInPanel = textRef.current?.contains(selection.focusNode);
 
-      setLastSelection(selectionInfo);
-      onTextSelect(selectionInfo);
-      setSelectionActive(true);
-      setStatusMessage('Text selected. Choose an annotation type.');
-      
-      // Prevent selection from being cleared
-      e.preventDefault();
+    if (!isStartInPanel || !isEndInPanel) {
+      clearSelection();
+      setShowToast(true);
+      setStatusMessage('Please keep your selection inside the text box.');
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    // Get the text content up to the selection start
+    const preSelectionRange = range.cloneRange();
+    preSelectionRange.selectNodeContents(textRef.current);
+    preSelectionRange.setEnd(range.startContainer, range.startOffset);
+    const start = preSelectionRange.toString().length;
+
+    const selectionInfo = {
+      text: selectedText,
+      position: range.getBoundingClientRect(),
+      start: start,
+      end: start + selectedText.length
+    };
+
+    // Check for overlapping with existing annotations
+    const isOverlapping = annotations.some(annotation => (
+      (start >= annotation.start && start < annotation.end) ||
+      (start + selectedText.length > annotation.start && start + selectedText.length <= annotation.end) ||
+      (start <= annotation.start && start + selectedText.length >= annotation.end)
+    ));
+
+    if (isOverlapping) {
+      clearSelection();
+      setShowToast(true);
+      setStatusMessage('Selection overlaps with existing annotation. Please select different text.');
+      return;
+    }
+
+    setLastSelection(selectionInfo);
+    onTextSelect(selectionInfo);
+    setSelectionActive(true);
+    setStatusMessage('Text selected. Choose an annotation type.');
+  };
+  // Handle selection clear when mouse leaves text panel
+  const handleMouseLeave = (e) => {
+    if (isSelecting) {
+      clearSelection();
+      setShowToast(true);
+      setStatusMessage('Please keep your selection inside the text box.');
     }
   };
 
@@ -194,10 +242,7 @@ const TextAnnotationPanel = ({
     if (currentSelection) {
       onAnnotationSelect(annotationType);
       setStatusMessage(`Applied ${annotationType.replace('_', ' ')} annotation`);
-      window.getSelection()?.removeAllRanges();
-      setLastSelection(null);
-      setSelectionActive(false);
-      onTextSelect(null);
+      clearSelection();
     }
   };
 
@@ -240,7 +285,7 @@ const TextAnnotationPanel = ({
         const isSelected = currentSelection && selectionActive &&
                          currentSelection.start <= lastIndex &&
                          currentSelection.end >= annotation.start;
-        
+
         result.push(
           <span 
             key={`text-${index}`}
@@ -267,7 +312,7 @@ const TextAnnotationPanel = ({
       const isSelected = currentSelection && selectionActive &&
                        currentSelection.start <= lastIndex &&
                        currentSelection.end >= text.length;
-      
+
       result.push(
         <span 
           key="text-end"
@@ -280,7 +325,6 @@ const TextAnnotationPanel = ({
 
     return result;
   };
-
   return (
     <div role="application" aria-label="Text Annotation Panel">
       {showToast && (
@@ -301,7 +345,7 @@ const TextAnnotationPanel = ({
           </span>
         </div>
       )}
-      
+
       {(selectedText || lastSelection) && (
         <div className="mb-4 p-3 bg-blue-100 rounded-lg" role="status" aria-live="polite">
           <span className="text-sm text-blue-800 font-medium">
@@ -314,8 +358,11 @@ const TextAnnotationPanel = ({
 
       <div 
         ref={textRef}
-        className="prose max-w-none text-gray-800 leading-relaxed select-text mb-6"
+        className="prose max-w-none text-gray-800 leading-relaxed mb-6 border-2 border-gray-300 rounded-lg p-4 selectable-text"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         style={{ fontSize: '1.125rem', lineHeight: '1.8' }}
         role="textbox"
         aria-label="Annotatable text content"
@@ -332,7 +379,7 @@ const TextAnnotationPanel = ({
             Use keyboard shortcuts shown on buttons or select with mouse/keyboard
           </span>
         </h3>
-        
+
         <div 
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
           role="group"
@@ -341,22 +388,20 @@ const TextAnnotationPanel = ({
           {ANNOTATION_BUTTONS.map((button, index) => {
             const isDisabled = button.type !== 'Main_Action' && !hasMainAction;
             const shortcut = KEYBOARD_SHORTCUTS[button.type];
-            
+
             return (
               <button
                 key={button.type}
                 ref={el => buttonsRef.current[index] = el}
                 onClick={() => handleAnnotationClick(button.type)}
                 disabled={isDisabled}
-                className={`
-                  px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
                   focus:outline-none focus:ring-2 
                   ${isDisabled 
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : `bg-${button.baseColor}-200 hover:bg-${button.baseColor}-300 
                        focus:ring-${button.baseColor}-500 focus:ring-offset-2`
-                  }
-                `}
+                  }`}
                 aria-label={`${button.label} (Press ${shortcut})`}
                 aria-disabled={isDisabled}
                 aria-description={button.description}

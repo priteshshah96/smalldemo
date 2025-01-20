@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { cleanSelectedText, annotationStore } from './TextAnnotationUtils';
 import Toast from './Toast';
 
 // Enhanced highlight colors with better contrast for accessibility
@@ -21,10 +22,8 @@ const HIGHLIGHT_COLORS = {
   'Contradictions': 'bg-rose-200 hover:bg-rose-300'
 };
 
-// Style for persistent text selection
 const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-2 border-blue-300 rounded';
 
-// Keyboard shortcuts mapping
 const KEYBOARD_SHORTCUTS = {
   'Main_Action': '1',
   'Agent': '2',
@@ -43,7 +42,6 @@ const KEYBOARD_SHORTCUTS = {
   'Contradictions': 'd'
 };
 
-// Button configuration with matching colors and descriptions
 const ANNOTATION_BUTTONS = [
   { type: 'Main_Action', label: 'Main Action', baseColor: 'blue', description: 'Primary action or event being described' },
   { type: 'Agent', label: 'Agent', baseColor: 'emerald', description: 'Entity performing the action' },
@@ -61,61 +59,58 @@ const ANNOTATION_BUTTONS = [
   { type: 'Implications', label: 'Implications', baseColor: 'red', description: 'Future impact or significance' },
   { type: 'Contradictions', label: 'Contradictions', baseColor: 'rose', description: 'Inconsistencies or conflicts' }
 ];
+
 const TextAnnotationPanel = ({
   text,
-  annotations,
-  onTextSelect,
-  onAnnotationSelect,
-  selectedText,
+  annotations = [],
+  onAnnotationUpdate,
+  onSelectionUpdate, // New prop to notify parent about selection
   eventType
 }) => {
   const textRef = useRef(null);
   const buttonsRef = useRef([]);
+  
+  // State
   const [hoveredAnnotation, setHoveredAnnotation] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
-  const [lastSelection, setLastSelection] = useState(null);
+  const [currentSelection, setCurrentSelection] = useState(null);
   const [selectionActive, setSelectionActive] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
 
   // Check if Main Action exists
-  const hasMainAction = annotations.some(annotation => annotation.type === 'Main_Action');
+  const hasMainAction = annotations.some(ann => ann.type === 'Main_Action');
 
-  // Clear selection helper function
+  
+
+  // Clear current selection
   const clearSelection = () => {
-    // Clear window selection first
     const selection = window.getSelection();
     if (selection) {
       try {
         selection.removeAllRanges();
       } catch (e) {
-        selection.empty(); // Fallback for older browsers
+        selection.empty();
       }
     }
-    
-    // Then clear component state
     setSelectionActive(false);
-    setLastSelection(null);
-    onTextSelect(null);
-    setIsSelecting(false); // Also reset selecting state
+    setCurrentSelection(null);
+    setIsSelecting(false);
   };
 
-  // Handle keyboard shortcuts and escape key
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        e.preventDefault(); // Prevent any default ESC behavior
-        e.stopPropagation(); // Stop event bubbling
-        
-        // Only clear if there's actually a selection
-        if (selectedText || lastSelection || window.getSelection()?.toString().trim()) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentSelection || window.getSelection()?.toString().trim()) {
           clearSelection();
         }
         return;
       }
 
-      // Only handle shortcuts if there's an active selection
-      if (!selectedText && !lastSelection) return;
+      if (!currentSelection) return;
 
       const key = e.key.toLowerCase();
       const annotationType = Object.entries(KEYBOARD_SHORTCUTS).find(([_, shortcut]) => 
@@ -133,19 +128,15 @@ const TextAnnotationPanel = ({
       }
     };
 
-    // Use capture phase to handle ESC before other handlers
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [selectedText, lastSelection, hasMainAction]);
+  }, [currentSelection, hasMainAction]);
 
-  // Clear selection when event type changes
+  // Clear selection on event type change
   useEffect(() => {
-    if (selectedText || lastSelection) {
-      clearSelection();
-    }
+    clearSelection();
   }, [eventType]);
 
-  // Handle mouse down to track selection start
   const handleMouseDown = (e) => {
     if (!textRef.current?.contains(e.target)) {
       e.preventDefault();
@@ -154,7 +145,6 @@ const TextAnnotationPanel = ({
     setIsSelecting(true);
   };
 
-  // Handle mouse move during selection
   const handleMouseMove = (e) => {
     if (!isSelecting) return;
     
@@ -165,127 +155,163 @@ const TextAnnotationPanel = ({
     }
   };
 
-  // Handle mouse up to end selection
+  // Get text content up to a node
+  const getTextUpToNode = (node) => {
+    const textNodes = [];
+    const walk = document.createTreeWalker(
+      textRef.current,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+
+    let currentNode;
+    while ((currentNode = walk.nextNode())) {
+      if (currentNode === node) {
+        break;
+      }
+      textNodes.push(currentNode.textContent);
+    }
+
+    return textNodes.join('');
+  };
+
+  const calculateExactOffsets = () => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+  
+    const range = selection.getRangeAt(0);
+    const startContainer = range.startContainer;
+    const endContainer = range.endContainer;
+  
+    // Get text content before the selection starts
+    const textBeforeStart = getTextUpToNode(startContainer);
+    const textBeforeEnd = getTextUpToNode(endContainer);
+  
+    // Calculate exact positions
+    let startPos = textBeforeStart.length + range.startOffset;
+    let endPos = textBeforeEnd.length + range.endOffset;
+  
+    // Adjust for leading/trailing whitespace
+    const selectedText = text.substring(startPos, endPos);
+    const trimmedText = selectedText.trim();
+    const leadingWhitespace = selectedText.length - selectedText.trimStart().length;
+    const trailingWhitespace = selectedText.length - selectedText.trimEnd().length;
+  
+    startPos += leadingWhitespace;
+    endPos -= trailingWhitespace;
+  
+    return { startPos, endPos };
+  };
+
   const handleMouseUp = (e) => {
     setIsSelecting(false);
-
+  
     const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
-
+    let selectedText = selection.toString().trim();
     if (!selectedText) {
       clearSelection();
       return;
     }
-
-    // Check if both start and end points are within the text panel
+  
     const isStartInPanel = textRef.current?.contains(selection.anchorNode);
     const isEndInPanel = textRef.current?.contains(selection.focusNode);
-
+  
     if (!isStartInPanel || !isEndInPanel) {
       clearSelection();
-      setShowToast(true);
-      setStatusMessage('Please keep your selection inside the text box.');
+      setShowToast({ message: 'Please keep your selection inside the text box.', type: 'error' }); // Set toast message
       return;
     }
-
-    const range = selection.getRangeAt(0);
-
-    // Get the text content up to the selection start
-    const preSelectionRange = range.cloneRange();
-    preSelectionRange.selectNodeContents(textRef.current);
-    preSelectionRange.setEnd(range.startContainer, range.startOffset);
-    const start = preSelectionRange.toString().length;
-
-    const selectionInfo = {
-      text: selectedText,
-      position: range.getBoundingClientRect(),
-      start: start,
-      end: start + selectedText.length
-    };
-
-    // Check for overlapping with existing annotations
+  
+    const positions = calculateExactOffsets();
+    if (!positions || positions.startPos === null || positions.endPos === null) {
+      clearSelection();
+      return;
+    }
+  
+    // Clean and prepare the selection
+    const rawSelectedText = text.substring(positions.startPos, positions.endPos);
+    const cleanedText = cleanSelectedText(rawSelectedText);
+  
+    // Check for overlapping annotations
     const isOverlapping = annotations.some(annotation => (
-      (start >= annotation.start && start < annotation.end) ||
-      (start + selectedText.length > annotation.start && start + selectedText.length <= annotation.end) ||
-      (start <= annotation.start && start + selectedText.length >= annotation.end)
+      (positions.startPos >= annotation.start && positions.startPos < annotation.end) ||
+      (positions.endPos > annotation.start && positions.endPos <= annotation.end) ||
+      (positions.startPos <= annotation.start && positions.endPos >= annotation.end)
     ));
-
+  
     if (isOverlapping) {
       clearSelection();
-      setShowToast(true);
-      setStatusMessage('Selection overlaps with existing annotation. Please select different text.');
+      setShowToast({ message: 'Selection overlaps with existing annotation.', type: 'error' }); // Set toast message
       return;
     }
-
-    setLastSelection(selectionInfo);
-    onTextSelect(selectionInfo);
+  
+    // Set the current selection
+    const selectionData = {
+      text: cleanedText,
+      start: positions.startPos,
+      end: positions.endPos
+    };
+    setCurrentSelection(selectionData);
+    onSelectionUpdate(selectionData); // Notify parent component
     setSelectionActive(true);
-    setStatusMessage('Text selected. Choose an annotation type.');
   };
-  // Handle selection clear when mouse leaves text panel
+
   const handleMouseLeave = (e) => {
     if (isSelecting) {
       clearSelection();
-      setShowToast(true);
-      setStatusMessage('Please keep your selection inside the text box.');
+      setShowToast({ message: 'Please keep your selection inside the text box.', type: 'error' }); // Set toast message
     }
   };
 
   const handleAnnotationClick = (annotationType) => {
-    if (annotationType !== 'Main_Action' && !hasMainAction) {
-      setShowToast(true);
-      setStatusMessage('Please annotate Main Action first');
+    if (!currentSelection) {
+      setShowToast({ message: 'Please select text before adding an annotation.', type: 'error' });
       return;
     }
-
-    const currentSelection = lastSelection || selectedText;
+  
+    // Prevent multiple Main Action annotations
+    if (annotationType === 'Main_Action' && hasMainAction) {
+      setShowToast({ message: 'Main Action already annotated. Please remove the existing one first.', type: 'error' });
+      return;
+    }
+  
+    if (annotationType !== 'Main_Action' && !hasMainAction) {
+      setShowToast({ message: 'Please annotate Main Action first', type: 'error' });
+      return;
+    }
+  
     if (currentSelection) {
-      onAnnotationSelect(annotationType);
-      setStatusMessage(`Applied ${annotationType.replace('_', ' ')} annotation`);
+      // Add to annotation store and get ID
+      const annotationId = annotationStore.addAnnotation(
+        currentSelection.text,
+        currentSelection.start,
+        currentSelection.end
+      );
+  
+      // Notify parent component
+      onAnnotationUpdate(annotationType, annotationId);
+      
+      // Clear selection and show feedback
       clearSelection();
+      setShowToast({ message: `Applied ${annotationType.replace('_', ' ')} annotation`, type: 'success' });
     }
   };
 
-  const getAnnotationFragment = (fragment, annotationType, index) => (
-    <mark
-      key={`annotation-${index}`}
-      className={`${HIGHLIGHT_COLORS[annotationType]} relative cursor-help transition-colors duration-150`}
-      onMouseEnter={() => setHoveredAnnotation(index)}
-      onMouseLeave={() => setHoveredAnnotation(null)}
-      role="mark"
-      aria-label={`${annotationType.replace('_', ' ')} annotation: ${fragment}`}
-      tabIndex="0"
-    >
-      {fragment}
-      {hoveredAnnotation === index && (
-        <div 
-          className="absolute bottom-full left-1/2 transform -translate-x-1/2 px-2 py-1 
-                     bg-gray-800 text-white text-xs rounded z-10 whitespace-nowrap mb-1"
-          role="tooltip"
-          id={`tooltip-${index}`}
-          aria-hidden="true"
-        >
-          {annotationType.replace('_', ' ')}
-        </div>
-      )}
-    </mark>
-  );
-
   const renderHighlightedText = () => {
     if (!text) return null;
-
+  
     let lastIndex = 0;
     const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
     const result = [];
-    const currentSelection = lastSelection || selectedText;
-
+  
     sortedAnnotations.forEach((annotation, index) => {
       if (annotation.start > lastIndex) {
         const segment = text.slice(lastIndex, annotation.start);
         const isSelected = currentSelection && selectionActive &&
                          currentSelection.start <= lastIndex &&
                          currentSelection.end >= annotation.start;
-
+  
         result.push(
           <span 
             key={`text-${index}`}
@@ -295,24 +321,44 @@ const TextAnnotationPanel = ({
           </span>
         );
       }
-
+  
+      const annotationData = annotationStore.getAnnotation(annotation.id);
+      const annotationText = annotationData ? annotationData.text : text.slice(annotation.start, annotation.end);
+  
       result.push(
-        getAnnotationFragment(
-          text.slice(annotation.start, annotation.end),
-          annotation.type,
-          index
-        )
+        <mark
+          key={`annotation-${index}`}
+          className={`${HIGHLIGHT_COLORS[annotation.type]} relative cursor-help transition-colors duration-150`}
+          onMouseEnter={() => setHoveredAnnotation(index)}
+          onMouseLeave={() => setHoveredAnnotation(null)}
+          role="mark"
+          aria-label={`${annotation.type.replace('_', ' ')} annotation: ${annotationText}`}
+          tabIndex="0"
+        >
+          {annotationText}
+          {hoveredAnnotation === index && (
+            <div 
+              className="absolute bottom-full left-1/2 transform -translate-x-1/2 px-2 py-1 
+                       bg-gray-800 text-white text-xs rounded z-10 whitespace-nowrap mb-1"
+              role="tooltip"
+              id={`tooltip-${index}`}
+              aria-hidden="true"
+            >
+              {annotation.type.replace('_', ' ')}
+            </div>
+          )}
+        </mark>
       );
-
+  
       lastIndex = annotation.end;
     });
-
+  
     if (lastIndex < text.length) {
       const segment = text.slice(lastIndex);
       const isSelected = currentSelection && selectionActive &&
                        currentSelection.start <= lastIndex &&
                        currentSelection.end >= text.length;
-
+  
       result.push(
         <span 
           key="text-end"
@@ -322,14 +368,16 @@ const TextAnnotationPanel = ({
         </span>
       );
     }
-
+  
     return result;
   };
+
   return (
     <div role="application" aria-label="Text Annotation Panel">
       {showToast && (
         <Toast 
-          message={statusMessage} 
+          message={showToast.message} 
+          type={showToast.type}
           onClose={() => setShowToast(false)} 
         />
       )}
@@ -346,10 +394,10 @@ const TextAnnotationPanel = ({
         </div>
       )}
 
-      {(selectedText || lastSelection) && (
+      {currentSelection && (
         <div className="mb-4 p-3 bg-blue-100 rounded-lg" role="status" aria-live="polite">
           <span className="text-sm text-blue-800 font-medium">
-            Current selected text: <strong>"{(selectedText || lastSelection)?.text}"</strong>
+            Current selected text: <strong>"{currentSelection.text}"</strong>
             <br />
             <span className="text-xs text-blue-600">Press ESC to clear selection</span>
           </span>
@@ -404,7 +452,6 @@ const TextAnnotationPanel = ({
                   }`}
                 aria-label={`${button.label} (Press ${shortcut})`}
                 aria-disabled={isDisabled}
-                aria-description={button.description}
                 title={isDisabled
                   ? 'Please annotate Main Action first'
                   : `${button.description} (Shortcut: ${shortcut})`

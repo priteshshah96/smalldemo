@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
+import { prepareDataForDownload,  annotationStore } from './TextAnnotationUtils';
+
 
 // Field ordering constants
 const FIELD_ORDER = [
@@ -51,6 +53,8 @@ const SYNTAX_COLORS = {
 
 const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   const [expandedPaths, setExpandedPaths] = useState(new Set(['Arguments', 'Arguments.Object']));
+  const [displayData, setDisplayData] = useState(data);
+
 
   useEffect(() => {
     const pathsToExpand = new Set(['Arguments', 'Arguments.Object']);
@@ -79,6 +83,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
 
     findPathsWithValues(data);
     setExpandedPaths(pathsToExpand);
+    setDisplayData(data);
   }, [data]);
 
   const isArgumentSection = (path) => {
@@ -104,6 +109,27 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   const handleDelete = (path, e) => {
     e.stopPropagation();
     e.preventDefault();
+  
+    // Get the value before removal for cleaning up annotation store
+    const pathParts = path.split('.');
+    let currentObj = displayData;
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      currentObj = currentObj[pathParts[i]];
+    }
+    const valueToRemove = currentObj[pathParts[pathParts.length - 1]];
+  
+    // Remove from annotation store if it's an ID
+    if (typeof valueToRemove === 'string') {
+      annotationStore.removeAnnotation(valueToRemove);
+    } else if (Array.isArray(valueToRemove)) {
+      valueToRemove.forEach(id => {
+        if (typeof id === 'string') {
+          annotationStore.removeAnnotation(id);
+        }
+      });
+    }
+  
+    // Trigger the parent component's removal logic
     onRemoveAnnotation(path);
   };
 
@@ -112,38 +138,77 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   };
 
   const renderValue = (value, path) => {
+    console.log("Rendering value:", value, "at path:", path);
+  
     if (Array.isArray(value)) {
       const nonEmptyValues = value.filter(item => item && item !== '');
       if (nonEmptyValues.length === 0) {
         return <span className={SYNTAX_COLORS.string}>""</span>;
       }
+  
+      // Special handling for annotations array
+      if (path === 'annotations') {
+        return (
+          <div className="flex flex-col">
+            {nonEmptyValues.map((item, index) => {
+              // Render annotation ID or text
+              const displayText = item.id || item.text || item;
+              return (
+                <div key={index} className="flex items-center group py-0.5">
+                  <span className={SYNTAX_COLORS.string}>"{displayText}"</span>
+                  <button
+                    onClick={(e) => handleDelete(`${path}.${index}`, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
+                             transition-opacity focus:opacity-100 focus:outline-none
+                             focus:ring-1 focus:ring-red-500"
+                    aria-label={`Remove annotation`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                  </button>
+                  {index < nonEmptyValues.length - 1 && (
+                    <span className={SYNTAX_COLORS.comma}>, </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+  
+      // Default array rendering
       return (
         <div className="flex flex-col">
-          {nonEmptyValues.map((item, index) => (
-            <div key={index} className="flex items-center group py-0.5">
-              <span className={SYNTAX_COLORS.string}>"{item}"</span>
-              <button
-                onClick={(e) => handleDelete(`${path}.${index}`, e)}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
-                         transition-opacity focus:opacity-100 focus:outline-none
-                         focus:ring-1 focus:ring-red-500"
-                aria-label={`Remove annotation`}
-              >
-                <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-              </button>
-              {index < nonEmptyValues.length - 1 && (
-                <span className={SYNTAX_COLORS.comma}>, </span>
-              )}
-            </div>
-          ))}
+          {nonEmptyValues.map((item, index) => {
+            const annotation = annotationStore.getAnnotation(item);
+            const displayText = annotation ? annotation.text : item;
+            return (
+              <div key={index} className="flex items-center group py-0.5">
+                <span className={SYNTAX_COLORS.string}>"{displayText}"</span>
+                <button
+                  onClick={(e) => handleDelete(`${path}.${index}`, e)}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
+                           transition-opacity focus:opacity-100 focus:outline-none
+                           focus:ring-1 focus:ring-red-500"
+                  aria-label={`Remove annotation`}
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                </button>
+                {index < nonEmptyValues.length - 1 && (
+                  <span className={SYNTAX_COLORS.comma}>, </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       );
     }
-    
+  
     if (typeof value === 'string' && value) {
+      const annotation = annotationStore.getAnnotation(value);
+      const displayText = annotation ? annotation.text : value;
       return (
         <div className="flex items-center group">
-          <span className={SYNTAX_COLORS.string}>"{value}"</span>
+          <span className={SYNTAX_COLORS.string}>"{displayText}"</span>
           <button
             onClick={(e) => handleDelete(path, e)}
             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded ml-2
@@ -156,7 +221,25 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
         </div>
       );
     }
-
+  
+    if (typeof value === 'object' && value !== null) {
+      // Handle objects by rendering their keys and values
+      return (
+        <div className="flex flex-col">
+          {Object.entries(value).map(([key, val], index) => (
+            <div key={key} className="flex items-center group py-0.5">
+              <span className={SYNTAX_COLORS.key}>"{key}"</span>
+              <span className={SYNTAX_COLORS.colon}>: </span>
+              {renderValue(val, `${path}.${key}`)}
+              {index < Object.keys(value).length - 1 && (
+                <span className={SYNTAX_COLORS.comma}>, </span>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+  
     return <span className={SYNTAX_COLORS.string}>"{value}"</span>;
   };
 
@@ -172,18 +255,21 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   };
 
   const renderField = (key, value, depth = 0, path = '') => {
+    // Skip the 'annotations' field
+    if (key === 'annotations') return null;
+  
     const indent = '  '.repeat(depth);
     const isCollapsible = shouldCollapse(key, value) && !Array.isArray(value);
     const currentPath = path ? `${path}.${key}` : key;
     const isExpanded = isArgumentSection(currentPath) ? true : expandedPaths.has(currentPath);
-
+  
     if (isCollapsible) {
       return (
         <div key={key} className="group font-mono">
           <div
             className={`flex items-center group py-0.5 hover:bg-gray-800/50 rounded px-2 -mx-2
-                     focus-within:ring-1 focus-within:ring-blue-500 focus-within:outline-none
-                     ${isArgumentSection(currentPath) ? 'cursor-default' : 'cursor-pointer'}`}
+                       focus-within:ring-1 focus-within:ring-blue-500 focus-within:outline-none
+                       ${isArgumentSection(currentPath) ? 'cursor-default' : 'cursor-pointer'}`}
             onClick={() => !isArgumentSection(currentPath) && togglePath(currentPath)}
             role={isArgumentSection(currentPath) ? undefined : "button"}
             tabIndex={isArgumentSection(currentPath) ? undefined : 0}
@@ -193,14 +279,13 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
             <span className="text-gray-400 w-4">
               {isExpanded ? 
                 <ChevronDown className="w-3.5 h-3.5" /> : 
-                <ChevronRight className="w-3.5 h-3.5" />
-              }
+                <ChevronRight className="w-3.5 h-3.5" />}
             </span>
             <span className={SYNTAX_COLORS.key}>{indent}"{key}"</span>
             <span className={SYNTAX_COLORS.colon}>: </span>
             <span className={SYNTAX_COLORS.bracket}>{Array.isArray(value) ? '[' : '{'}</span>
           </div>
-
+  
           <div className={isExpanded ? 'ml-4' : 'hidden'}>
             {Array.isArray(value) ? (
               renderValue(value, currentPath)
@@ -225,7 +310,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
               })()
             )}
           </div>
-
+  
           <div className={isExpanded ? 'py-0.5' : 'hidden'}>
             <span className={SYNTAX_COLORS.bracket}>
               {indent}{Array.isArray(value) ? ']' : '}'}
@@ -234,7 +319,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
         </div>
       );
     }
-
+  
     return (
       <div key={key} className="flex items-center group py-0.5 font-mono">
         <span className={SYNTAX_COLORS.key}>{indent}"{key}"</span>
@@ -244,12 +329,17 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
     );
   };
 
+  const handleDownloadClick = () => {
+    const downloadData = prepareDataForDownload(data);
+    onDownload(downloadData);
+  };
+
   return (
     <div className="bg-gray-900 rounded-xl shadow-lg overflow-hidden border border-gray-800">
       <div className="bg-gray-800/50 px-4 py-3 flex justify-between items-center border-b border-gray-700">
         <h3 className="text-gray-100 font-medium tracking-wide">JSON Output</h3>
         <button
-          onClick={onDownload}
+          onClick={handleDownloadClick}
           className="p-2 hover:bg-gray-700 rounded-lg transition-colors
                    focus:outline-none focus:ring-2 focus:ring-blue-500"
           title="Download JSON"
@@ -268,7 +358,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
         <div className={SYNTAX_COLORS.bracket}>{'{'}</div>
         <div className="ml-4">
           {(() => {
-            const entries = sortEntries(Object.entries(data), FIELD_ORDER);
+            const entries = sortEntries(Object.entries(displayData), FIELD_ORDER);
             return entries.map(([key, value], index) => (
               <React.Fragment key={key}>
                 {renderField(key, value, 1)}

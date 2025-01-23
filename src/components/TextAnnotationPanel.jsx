@@ -1,25 +1,24 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
 import { cleanSelectedText, annotationStore } from './TextAnnotationUtils';
 import Toast from './Toast';
 
 // Enhanced highlight colors with better contrast for accessibility
 const HIGHLIGHT_COLORS = {
   'Main_Action': 'bg-blue-200 hover:bg-blue-300',
-  'Agent': 'bg-emerald-200 hover:bg-emerald-300',
+  'Agent': 'bg-green-200 hover:bg-green-300',
   'Object.Base_Object': 'bg-violet-200 hover:bg-violet-300',
   'Object.Base_Modifier': 'bg-violet-200 hover:bg-violet-300',
   'Object.Attached_Object': 'bg-violet-200 hover:bg-violet-300',
   'Object.Attached_Modifier': 'bg-violet-200 hover:bg-violet-300',
-  'Context': 'bg-amber-200 hover:bg-amber-300',
-  'Purpose': 'bg-fuchsia-200 hover:bg-fuchsia-300',
-  'Method': 'bg-purple-200 hover:bg-purple-300',
-  'Results': 'bg-indigo-200 hover:bg-indigo-300',
-  'Analysis': 'bg-sky-200 hover:bg-sky-300',
-  'Challenge': 'bg-teal-200 hover:bg-teal-300',
-  'Ethical': 'bg-yellow-200 hover:bg-yellow-300',
-  'Implications': 'bg-red-200 hover:bg-red-300',
-  'Contradictions': 'bg-rose-200 hover:bg-rose-300'
+  'Context': 'bg-orange-200 hover:bg-orange-300',
+  'Purpose': 'bg-pink-200 hover:bg-pink-300', 
+  'Method': 'bg-red-200 hover:bg-red-300',
+  'Results': 'bg-amber-200 hover:bg-amber-300',
+  'Analysis': 'bg-lime-200 hover:bg-lime-300',
+  'Challenge': 'bg-cyan-200 hover:bg-cyan-300',
+  'Ethical': 'bg-emerald-200 hover:bg-emerald-300',
+  'Implications': 'bg-red-400 hover:bg-red-500',
+  'Contradictions': 'bg-fuchsia-200 hover:bg-fuchsia-300'
 };
 
 const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-2 border-blue-300 rounded';
@@ -44,20 +43,20 @@ const KEYBOARD_SHORTCUTS = {
 
 const ANNOTATION_BUTTONS = [
   { type: 'Main_Action', label: 'Main Action', baseColor: 'blue', description: 'Primary action or event being described' },
-  { type: 'Agent', label: 'Agent', baseColor: 'emerald', description: 'Entity performing the action' },
-  { type: 'Object.Base_Object', label: 'Base Object', baseColor: 'violet', description: 'Primary object involved in the action' },
-  { type: 'Object.Base_Modifier', label: 'Base Modifier', baseColor: 'violet', description: 'Description or qualifier of base object' },
-  { type: 'Object.Attached_Object', label: 'Attached Object', baseColor: 'violet', description: 'Secondary object connected to base object' },
-  { type: 'Object.Attached_Modifier', label: 'Attached Modifier', baseColor: 'violet', description: 'Description of attached object' },
-  { type: 'Context', label: 'Context', baseColor: 'amber', description: 'Surrounding circumstances or conditions' },
-  { type: 'Purpose', label: 'Purpose', baseColor: 'fuchsia', description: 'Goal or intended outcome' },
-  { type: 'Method', label: 'Method', baseColor: 'purple', description: 'How the action is performed' },
-  { type: 'Results', label: 'Results', baseColor: 'indigo', description: 'Outcome or consequences' },
-  { type: 'Analysis', label: 'Analysis', baseColor: 'sky', description: 'Interpretation or evaluation' },
-  { type: 'Challenge', label: 'Challenge', baseColor: 'teal', description: 'Difficulties or obstacles' },
-  { type: 'Ethical', label: 'Ethical', baseColor: 'yellow', description: 'Moral or ethical considerations' },
-  { type: 'Implications', label: 'Implications', baseColor: 'red', description: 'Future impact or significance' },
-  { type: 'Contradictions', label: 'Contradictions', baseColor: 'rose', description: 'Inconsistencies or conflicts' }
+  { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Entity performing the action' },
+  { type: 'Object.Base_Object', label: 'Base Object', baseColor: 'violet', description: 'Primary receiver of the action' },
+  { type: 'Object.Base_Modifier', label: 'Base Modifier', baseColor: 'violet', description: 'Words describing the base object' },
+  { type: 'Object.Attached_Object', label: 'Attached Object', baseColor: 'violet', description: 'Secondary receiver of the action' },
+  { type: 'Object.Attached_Modifier', label: 'Attached Modifier', baseColor: 'violet', description: 'Words describing the attached object' },
+  { type: 'Context', label: 'Context', baseColor: 'orange', description: 'Surrounding circumstances or conditions' },
+  { type: 'Purpose', label: 'Purpose', baseColor: 'pink', description: 'Goal or intended outcome' },
+  { type: 'Method', label: 'Method', baseColor: 'red', description: 'How the action is performed' },
+  { type: 'Results', label: 'Results', baseColor: 'amber', description: 'Outcome or consequences' },
+  { type: 'Analysis', label: 'Analysis', baseColor: 'lime', description: 'Interpretation or evaluation' },
+  { type: 'Challenge', label: 'Challenge', baseColor: 'cyan', description: 'Difficulties or obstacles' },
+  { type: 'Ethical', label: 'Ethical', baseColor: 'emerald', description: 'Moral or ethical considerations' },
+  { type: 'Implications', label: 'Implications', baseColor: 'red-400 text-white', description: 'Future impact or significance' },
+  { type: 'Contradictions', label: 'Contradictions', baseColor: 'fuchsia', description: 'Inconsistencies or conflicts' }
 ];
 
 const TextAnnotationPanel = ({

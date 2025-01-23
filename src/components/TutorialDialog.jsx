@@ -23,11 +23,13 @@ const TutorialDialog = ({ isOpen, onClose }) => {
         {/* Video Section */}
         <div className="mb-6">
           <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden">
-            <video 
+          <video 
               className="w-full h-full"
               controls
-              preload="metadata"
+              controlsList="nodownload"
+              preload="auto"
               poster="/api/placeholder/800/450"
+              playsInline
             >
               <source src={videoUrl} type="video/mp4" />
               Your browser does not support the video tag.

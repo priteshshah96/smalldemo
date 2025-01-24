@@ -17,7 +17,7 @@ const HIGHLIGHT_COLORS = {
   'Analysis': 'bg-lime-200 hover:bg-lime-300',
   'Challenge': 'bg-cyan-200 hover:bg-cyan-300',
   'Ethical': 'bg-emerald-200 hover:bg-emerald-300',
-  'Implications': 'bg-red-400 hover:bg-red-500',
+  'Implications': 'bg-red-400 hover:bg-red-700',
   'Contradictions': 'bg-fuchsia-200 hover:bg-fuchsia-300'
 };
 
@@ -327,7 +327,7 @@ const TextAnnotationPanel = ({
       result.push(
         <mark
           key={`annotation-${index}`}
-          className={`${HIGHLIGHT_COLORS[annotation.type]} relative cursor-help transition-colors duration-150`}
+          className={`${HIGHLIGHT_COLORS[annotation.type]} relative cursor-help transition-all duration-1`}
           onMouseEnter={() => setHoveredAnnotation(index)}
           onMouseLeave={() => setHoveredAnnotation(null)}
           role="mark"
@@ -338,7 +338,8 @@ const TextAnnotationPanel = ({
           {hoveredAnnotation === index && (
             <div 
               className="absolute bottom-full left-1/2 transform -translate-x-1/2 px-2 py-1 
-                       bg-gray-800 text-white text-xs rounded z-10 whitespace-nowrap mb-1"
+                      bg-gray-800 text-white text-xs rounded z-10 whitespace-nowrap mb-1
+                      transition-opacity duration-75"
               role="tooltip"
               id={`tooltip-${index}`}
               aria-hidden="true"
@@ -435,34 +436,34 @@ const TextAnnotationPanel = ({
           {ANNOTATION_BUTTONS.map((button, index) => {
             const isDisabled = button.type !== 'Main_Action' && !hasMainAction;
             const shortcut = KEYBOARD_SHORTCUTS[button.type];
+            const buttonColor = button.type === 'Implications' 
+              ? `bg-red-400 hover:bg-red-500`
+              : `bg-${button.baseColor}-200 hover:bg-${button.baseColor}-300`;
 
-            return (
-              <button
-                key={button.type}
-                ref={el => buttonsRef.current[index] = el}
-                onClick={() => handleAnnotationClick(button.type)}
-                disabled={isDisabled}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                  focus:outline-none focus:ring-2 
-                  ${isDisabled 
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : `bg-${button.baseColor}-200 hover:bg-${button.baseColor}-300 
-                       focus:ring-${button.baseColor}-500 focus:ring-offset-2`
-                  }`}
-                aria-label={`${button.label} (Press ${shortcut})`}
-                aria-disabled={isDisabled}
-                title={isDisabled
-                  ? 'Please annotate Main Action first'
-                  : `${button.description} (Shortcut: ${shortcut})`
-                }
-              >
-                <span>{button.label}</span>
-                <span className="ml-2 text-xs text-gray-500">
-                  {shortcut}
-                </span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={button.type}
+                  ref={el => buttonsRef.current[index] = el}
+                  onClick={() => handleAnnotationClick(button.type)}
+                  disabled={isDisabled}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                    focus:outline-none focus:ring-2 
+                    ${isDisabled 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : buttonColor}`}
+                  aria-label={`${button.label} (Press ${shortcut})`}
+                  aria-disabled={isDisabled}
+                  title={isDisabled
+                    ? 'Please annotate Main Action first'
+                    : `${button.description} (Shortcut: ${shortcut})`}
+                >
+                  <span>{button.label}</span>
+                  <span className="ml-2 text-xs text-gray-500">
+                    {shortcut}
+                  </span>
+                </button>
+              );
+            })}
         </div>
       </div>
 

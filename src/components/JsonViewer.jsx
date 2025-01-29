@@ -29,10 +29,10 @@ const ARGUMENTS_ORDER = [
 ];
 
 const OBJECT_FIELD_ORDER = [
-  'Base Object',
-  'Base Modifier',
-  'Attached Object',
-  'Attached Modifier'
+  'Primary Object',
+  'Primary Modifier',
+  'Secondary Object',
+  'Secondary Modifier'
 ];
 
 const EVENT_TYPES = [

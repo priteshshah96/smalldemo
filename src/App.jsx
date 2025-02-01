@@ -495,7 +495,7 @@ const App = () => {
                 <h3 className="text-xl font-semibold mb-2">Summarization</h3>
                 <textarea
                   className="w-full p-2 border border-gray-300 rounded-lg h-12 resize-none text-sm"
-                  placeholder="Add a brief summary (max 10 words)..."
+                  placeholder="Please summarize the event text in a single sentence."
                   value={currentEvent[eventType] || ''}
                   onChange={handleSummaryChange}
                   aria-label="Event summary"

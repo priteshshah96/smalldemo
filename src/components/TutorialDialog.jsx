@@ -1,101 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { X, AlertCircle, Loader } from 'lucide-react';
-
-const ErrorAlert = ({ message }) => (
-  <div className="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 w-[80%]">
-    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-    <p className="text-sm flex-1">{message}</p>
-  </div>
-);
+import React from 'react';
+import { X } from 'lucide-react';
 
 const TutorialDialog = ({ isOpen, onClose }) => {
-  const videoRef = useRef(null);
-  const [videoError, setVideoError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSeeking, setIsSeeking] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isBuffering, setIsBuffering] = useState(false);
-  
-  // Use relative URL for video source
-  const videoUrl = './video/tutorial.mp4';
-
-  useEffect(() => {
-    if (isOpen) {
-      setVideoError(false);
-      setIsLoading(true);
-      setErrorMessage('');
-    }
-  }, [isOpen]);
-
-  // Handle video loading error
-  const handleVideoError = (e) => {
-    console.error('Video loading error:', e);
-    setVideoError(true);
-    setIsLoading(false);
-    setErrorMessage(e.target.error ? e.target.error.message : 'Error loading video');
-  };
-
-  // Handle video loaded
-  const handleVideoLoaded = () => {
-    setIsLoading(false);
-    setIsBuffering(false);
-  };
-
-  // Handle video seeking
-  const handleSeeking = () => {
-    setIsSeeking(true);
-    setIsBuffering(true);
-  };
-
-  // Handle seek completed
-  const handleSeeked = () => {
-    setIsSeeking(false);
-    setIsBuffering(false);
-  };
-
-  // Handle buffering
-  const handleWaiting = () => {
-    setIsBuffering(true);
-  };
-
-  // Handle video playing
-  const handlePlaying = () => {
-    setIsBuffering(false);
-    setIsLoading(false);
-  };
-
-  // Handle time update
-  const handleTimeUpdate = () => {
-    if (videoRef.current && isBuffering) {
-      const buffered = videoRef.current.buffered;
-      const currentTime = videoRef.current.currentTime;
-      
-      // Check if current time is within buffered ranges
-      for (let i = 0; i < buffered.length; i++) {
-        if (currentTime >= buffered.start(i) && currentTime <= buffered.end(i)) {
-          setIsBuffering(false);
-          break;
-        }
-      }
-    }
-  };
-
-  // Add progress event handler
-  const handleProgress = () => {
-    if (videoRef.current) {
-      const buffered = videoRef.current.buffered;
-      const currentTime = videoRef.current.currentTime;
-      
-      // If we have buffered ranges, check them
-      if (buffered.length > 0) {
-        const bufferedEnd = buffered.end(buffered.length - 1);
-        if (bufferedEnd > currentTime) {
-          setIsBuffering(false);
-        }
-      }
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -116,60 +22,18 @@ const TutorialDialog = ({ isOpen, onClose }) => {
         {/* Video Section */}
         <div className="mb-6">
           <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden">
-            {/* Loading/Buffering Overlay */}
-            {(isLoading || isBuffering) && (
-              <div className="absolute inset-0 bg-gray-100/80 flex items-center justify-center z-10">
-                <div className="flex flex-col items-center">
-                  <Loader className="w-8 h-8 text-blue-600 animate-spin mb-2" />
-                  <span className="text-sm text-gray-600">
-                    {isLoading ? 'Loading video...' : 'Buffering...'}
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {/* Error Alert */}
-            {videoError && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ErrorAlert message={errorMessage || 'Error loading video. Please try again.'} />
-              </div>
-            )}
-
-            {/* Video Player */}
-            <video 
-              ref={videoRef}
-              className="w-full h-full"
-              controls
-              controlsList="nodownload"
-              preload="auto"
-              poster="/api/placeholder/800/450"
-              playsInline
-              onError={handleVideoError}
-              onLoadedData={handleVideoLoaded}
-              onSeeking={handleSeeking}
-              onSeeked={handleSeeked}
-              onWaiting={handleWaiting}
-              onPlaying={handlePlaying}
-              onTimeUpdate={handleTimeUpdate}
-              onProgress={handleProgress}
-            >
-              <source 
-                src={videoUrl} 
-                type="video/mp4"
-              />
-              Your browser does not support the video tag.
-            </video>
+            <iframe
+              className="w-full h-full absolute top-0 left-0"
+              src="https://www.youtube.com/embed/tf2RToh6_28"
+              title="Annotation Tool Tutorial"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
           </div>
           <p className="text-sm text-gray-500 mt-2">
             Watch the tutorial video above to see the annotation process in action.
           </p>
-          
-          {/* Debug Info - Remove in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-xs text-gray-500 mt-1">
-              Status: {isLoading ? 'Loading' : isBuffering ? 'Buffering' : isSeeking ? 'Seeking' : 'Ready'}
-            </div>
-          )}
         </div>
 
         {/* Written Instructions */}

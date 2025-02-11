@@ -42,21 +42,21 @@ const KEYBOARD_SHORTCUTS = {
 };
 
 const ANNOTATION_BUTTONS = [
-  { type: 'Main_Action', label: 'Main Action', baseColor: 'blue', description: 'Primary action or event being described' },
-  { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Entity performing the action' },
-  { type: 'Object.Primary_Object', label: 'Primary Object', baseColor: 'violet', description: 'Primary receiver of the main action' },
-  { type: 'Object.Primary_Modifier', label: 'Primary Modifier', baseColor: 'violet', description: 'Words describing the primary reciever' },
-  { type: 'Object.Secondary_Object', label: 'Secondary Object', baseColor: 'violet', description: 'Secondary receiver of the main action' },
-  { type: 'Object.Secondary_Modifier', label: 'Secondary Modifier', baseColor: 'violet', description: 'Words describing the secondary reciever' },
-  { type: 'Context', label: 'Context', baseColor: 'orange', description: 'Surrounding circumstances or conditions' },
-  { type: 'Purpose', label: 'Purpose', baseColor: 'pink', description: 'Goal or intended outcome' },
-  { type: 'Method', label: 'Method', baseColor: 'red', description: 'How the action is performed' },
-  { type: 'Results', label: 'Results', baseColor: 'amber', description: 'Outcome or consequences' },
-  { type: 'Analysis', label: 'Analysis', baseColor: 'lime', description: 'Interpretation or evaluation' },
-  { type: 'Challenge', label: 'Challenge', baseColor: 'cyan', description: 'Difficulties or obstacles' },
-  { type: 'Ethical', label: 'Ethical', baseColor: 'emerald', description: 'Moral or ethical considerations' },
-  { type: 'Implications', label: 'Implications', baseColor: 'red-400 text-white', description: 'Future impact or significance' },
-  { type: 'Contradictions', label: 'Contradictions', baseColor: 'fuchsia', description: 'Inconsistencies or conflicts' }
+  { type: 'Main_Action', label: 'Main Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
+  { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Person or Thing that does the Main Action' },
+  { type: 'Object.Primary_Object', label: 'Primary Object', baseColor: 'violet', description: 'Primary receiver/target of the Main Action' },
+  { type: 'Object.Primary_Modifier', label: 'Primary Modifier', baseColor: 'violet', description: 'Words describing the Primary Object' },
+  { type: 'Object.Secondary_Object', label: 'Secondary Object', baseColor: 'violet', description: 'Secondary receiver/target of the Main Action' },
+  { type: 'Object.Secondary_Modifier', label: 'Secondary Modifier', baseColor: 'violet', description: 'Words describing the Secondary Object' },
+  { type: 'Context', label: 'Context', baseColor: 'orange', description: 'Foundational or situational information of the paragraph' },
+  { type: 'Purpose', label: 'Purpose', baseColor: 'pink', description: 'Purpose or aim of the paragraph' },
+  { type: 'Method', label: 'Method', baseColor: 'red', description: 'Techniques, tools, methodology or frameworks used in the paragraph' },
+  { type: 'Results', label: 'Results', baseColor: 'amber', description: 'Observations or outputs of the paragraph' },
+  { type: 'Analysis', label: 'Analysis', baseColor: 'lime', description: 'Interpretation or explanation of other Arguments' },
+  { type: 'Challenge', label: 'Challenge', baseColor: 'cyan', description: 'Constraints or weaknesses of the Context, Method or Results' },
+  { type: 'Ethical', label: 'Ethical', baseColor: 'emerald', description: 'Ethical concerns, implications, and justifications of the paragraph' },
+  { type: 'Implications', label: 'Implications', baseColor: 'red-400 text-white', description: 'Broader applicability or significance and future research' },
+  { type: 'Contradictions', label: 'Contradictions', baseColor: 'fuchsia', description: 'Disagreements to existing knowledge' }
 ];
 
 const TextAnnotationPanel = ({

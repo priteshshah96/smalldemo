@@ -67,6 +67,7 @@ const TextAnnotationPanel = ({
   eventType
 }) => {
   const textRef = useRef(null);
+  const panelRef = useRef(null);
   const buttonsRef = useRef([]);
   
   // State
@@ -79,8 +80,6 @@ const TextAnnotationPanel = ({
 
   // Check if Main Action exists
   const hasMainAction = annotations.some(ann => ann.type === 'Main_Action');
-
-  
 
   // Clear current selection
   const clearSelection = () => {
@@ -100,6 +99,12 @@ const TextAnnotationPanel = ({
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Handle copy command (Ctrl+C or Cmd+C)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // Let default copy behavior work
+        return;
+      }
+
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -135,6 +140,33 @@ const TextAnnotationPanel = ({
   useEffect(() => {
     clearSelection();
   }, [eventType]);
+
+  useEffect(() => {
+    const handleDocumentClick = (e) => {
+      // Skip if no selection
+      if (!currentSelection && !window.getSelection()?.toString().trim()) {
+        return;
+      }
+
+      // Skip if clicking inside the text panel
+      if (textRef.current?.contains(e.target)) {
+        return;
+      }
+
+      // Skip if clicking on annotation buttons
+      if (buttonsRef.current.some(button => button?.contains(e.target))) {
+        return;
+      }
+
+      // Clear selection for clicks outside panel
+      clearSelection();
+      // Notify parent component
+      onSelectionUpdate(null);
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => document.removeEventListener('mousedown', handleDocumentClick);
+  }, [currentSelection, onSelectionUpdate]);
 
   const handleMouseDown = (e) => {
     if (!textRef.current?.contains(e.target)) {
@@ -373,7 +405,7 @@ const TextAnnotationPanel = ({
   };
 
   return (
-    <div role="application" aria-label="Text Annotation Panel">
+    <div ref={panelRef} role="application" aria-label="Text Annotation Panel">
       {showToast && (
         <Toast 
           message={showToast.message} 
@@ -468,11 +500,7 @@ const TextAnnotationPanel = ({
       </div>
 
       {/* Keyboard Instructions */}
-      <div 
-        className="mt-4 text-sm text-gray-600"
-        role="complementary"
-        aria-label="Keyboard navigation instructions"
-      >
+      <div className="mt-4 text-sm text-gray-600">
         <p>
           <strong>Keyboard navigation:</strong>
           <br />
@@ -483,6 +511,8 @@ const TextAnnotationPanel = ({
           • Use number keys 1-9 and letters (r,a,c,e,i,d) for quick annotation
           <br />
           • Press ESC to clear text selection
+          <br />
+          • Use Ctrl+C/Cmd+C to copy selected text
         </p>
       </div>
     </div>

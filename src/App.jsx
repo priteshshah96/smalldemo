@@ -226,6 +226,14 @@ const App = () => {
   const handleAnnotationRemove = (path) => {
     const newData = [...jsonData];
     const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
+
+    // Handle event type summaries (Background/Introduction, etc)
+    if (EVENT_TYPES.includes(path)) {
+      currentEvent[path] = '';
+      setJsonData(newData);
+      setLastSaved(new Date());
+      return;
+    }
   
     if (path === 'Main Action') {
       // Remove the annotation from the annotations array
@@ -319,6 +327,12 @@ const App = () => {
       setJsonData(newData);
       setLastSaved(new Date());
     }
+  };
+
+  // Handle summary focus
+  const handleSummaryFocus = () => {
+    // Clear the current selection in the parent
+    setCurrentSelection(null);
   };
 
   // Handle JSON download
@@ -498,6 +512,7 @@ const App = () => {
                   placeholder="Please summarize the event text in a single sentence."
                   value={currentEvent[eventType] || ''}
                   onChange={handleSummaryChange}
+                  onFocus={handleSummaryFocus}
                   aria-label="Event summary"
                   maxLength={100}
                 />

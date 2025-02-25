@@ -24,7 +24,7 @@ const TutorialDialog = ({ isOpen, onClose }) => {
           <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden">
             <iframe
               className="w-full h-full absolute top-0 left-0"
-              src="https://www.youtube.com/embed/tf2RToh6_28"
+              src="https://youtu.be/f73a9R1UUlY?si=UkLaLR0iFEgGPnHw"
               title="Annotation Tool Tutorial"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

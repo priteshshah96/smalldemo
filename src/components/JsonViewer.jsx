@@ -30,9 +30,7 @@ const ARGUMENTS_ORDER = [
 
 const OBJECT_FIELD_ORDER = [
   'Primary Object',
-  'Primary Modifier',
   'Secondary Object',
-  'Secondary Modifier'
 ];
 
 const EVENT_TYPES = [

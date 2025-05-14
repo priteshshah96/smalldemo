@@ -28,9 +28,7 @@ const DEFAULT_EVENT_STRUCTURE = {
     Agent: '',
     Object: {
       'Primary Object': '',
-      'Primary Modifier': '',
       'Secondary Object': '',
-      'Secondary Modifier': '',
     },
     Context: '',
     Purpose: '',

@@ -29,8 +29,6 @@ const ARGUMENTS_ORDER = [
 ];
 
 const OBJECT_FIELD_ORDER = [
-  'Primary Object',
-  'Secondary Object',
 ];
 
 const EVENT_TYPES = [
@@ -294,9 +292,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
                   entries = sortEntries(entries, FIELD_ORDER);
                 } else if (path === 'Arguments') {
                   entries = sortEntries(entries, ARGUMENTS_ORDER);
-                } else if (path === 'Arguments.Object') {
-                  entries = sortEntries(entries, OBJECT_FIELD_ORDER);
-                }
+                } 
                 return entries.map(([k, v], index) => (
                   <React.Fragment key={k}>
                     {renderField(k, v, depth + 1, currentPath)}

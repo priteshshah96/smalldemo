@@ -2,12 +2,13 @@ import React, { useRef, useState, useEffect } from 'react';
 import { cleanSelectedText, annotationStore } from './TextAnnotationUtils';
 import Toast from './Toast';
 
-// Enhanced highlight colors with better contrast for accessibility
+
+const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-2 border-blue-300 rounded';
+
 const HIGHLIGHT_COLORS = {
   'Main_Action': 'bg-blue-200 hover:bg-blue-300',
   'Agent': 'bg-green-200 hover:bg-green-300',
-  'Object.Primary_Object': 'bg-violet-200 hover:bg-violet-300',
-  'Object.Secondary_Object': 'bg-violet-200 hover:bg-violet-300',
+  'Object': 'bg-violet-200 hover:bg-violet-300', 
   'Context': 'bg-orange-200 hover:bg-orange-300',
   'Purpose': 'bg-pink-200 hover:bg-pink-300', 
   'Method': 'bg-red-200 hover:bg-red-300',
@@ -19,19 +20,16 @@ const HIGHLIGHT_COLORS = {
   'Contradictions': 'bg-fuchsia-200 hover:bg-fuchsia-300'
 };
 
-const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-2 border-blue-300 rounded';
-
 const KEYBOARD_SHORTCUTS = {
   'Main_Action': '1',
   'Agent': '2',
-  'Object.Primary_Object': '3',
-  'Object.Secondary_Object': '5',
-  'Context': '7',
-  'Purpose': '8',
-  'Method': '9',
-  'Results': 'r',
-  'Analysis': 'a',
-  'Challenge': 'c',
+  'Object': '3', 
+  'Context': '4',
+  'Purpose': '5',
+  'Method': '6',
+  'Results': '7',
+  'Analysis': '8',
+  'Challenge': '9',
   'Ethical': 'e',
   'Implications': 'i',
   'Contradictions': 'd'
@@ -40,8 +38,7 @@ const KEYBOARD_SHORTCUTS = {
 const ANNOTATION_BUTTONS = [
   { type: 'Main_Action', label: 'Main Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
   { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Person or Thing that does the Main Action' },
-  { type: 'Object.Primary_Object', label: 'Primary Object', baseColor: 'violet', description: 'Primary receiver/target of the Main Action' },
-  { type: 'Object.Secondary_Object', label: 'Secondary Object', baseColor: 'violet', description: 'Secondary receiver/target of the Main Action' },
+  { type: 'Object', label: 'Object', baseColor: 'violet', description: 'Receiver/target of the Main Action' }, 
   { type: 'Context', label: 'Context', baseColor: 'orange', description: 'Foundational or situational information of the paragraph' },
   { type: 'Purpose', label: 'Purpose', baseColor: 'pink', description: 'Purpose or aim of the paragraph' },
   { type: 'Method', label: 'Method', baseColor: 'red', description: 'Techniques, tools, methodology or frameworks used in the paragraph' },
@@ -502,7 +499,7 @@ const TextAnnotationPanel = ({
           <br />
           • Press Enter to activate buttons
           <br />
-          • Use number keys 1-9 and letters (r,a,c,e,i,d) for quick annotation
+          • Use number keys 1-9 and letters (e,i,d) for quick annotation
           <br />
           • Press ESC to clear text selection
           <br />

@@ -26,10 +26,7 @@ const DEFAULT_EVENT_STRUCTURE = {
   'Main Action': '',
   Arguments: {
     Agent: '',
-    Object: {
-      'Primary Object': '',
-      'Secondary Object': '',
-    },
+    Object: '',
     Context: '',
     Purpose: '',
     Method: '',
@@ -147,10 +144,7 @@ const App = () => {
           baseStructure.Arguments = {
             ...(baseStructure.Arguments || {}),
             ...event.Arguments,
-            Object: {
-              ...(baseStructure.Arguments?.Object || {}),
-              ...(event.Arguments.Object || {}),
-            },
+            Object: event.Arguments.Object || '',
           };
         }
   
@@ -193,19 +187,16 @@ const App = () => {
     // Update the Main Action or Arguments field
     if (annotationType === 'Main_Action') {
       currentEvent['Main Action'] = annotationId; // Ensure this is the ID, not the object
-    } else if (annotationType.startsWith('Object.')) {
-      const [_, subType] = annotationType.split('.');
-      const objectKey = subType.replace('_', ' ');
-
-      if (!currentEvent.Arguments.Object[objectKey]) {
-        currentEvent.Arguments.Object[objectKey] = annotationId;
-      } else {
-        const currentValue = currentEvent.Arguments.Object[objectKey];
-        currentEvent.Arguments.Object[objectKey] = Array.isArray(currentValue)
-          ? [...currentValue, annotationId]
-          : [currentValue, annotationId];
-      }
-    } else {
+    } else if (annotationType === 'Object') {
+  if (!currentEvent.Arguments.Object) {
+    currentEvent.Arguments.Object = annotationId;
+  } else {
+    const currentValue = currentEvent.Arguments.Object;
+    currentEvent.Arguments.Object = Array.isArray(currentValue)
+      ? [...currentValue, annotationId]
+      : [currentValue, annotationId];
+    }
+  } else {
       if (!currentEvent.Arguments[annotationType]) {
         currentEvent.Arguments[annotationType] = annotationId;
       } else {
@@ -222,97 +213,99 @@ const App = () => {
 
   // Handle annotation removal
   const handleAnnotationRemove = (path) => {
-    const newData = [...jsonData];
-    const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
+  const newData = [...jsonData];
+  const currentEvent = newData[currentPaperIndex].events[currentEventIndex];
 
-    // Handle event type summaries (Background/Introduction, etc)
-    if (EVENT_TYPES.includes(path)) {
-      currentEvent[path] = '';
-      setJsonData(newData);
-      setLastSaved(new Date());
-      return;
-    }
-  
-    if (path === 'Main Action') {
-      // Remove the annotation from the annotations array
-      currentEvent.annotations = currentEvent.annotations.filter(
-        (ann) => ann.id !== currentEvent['Main Action']
-      );
-      currentEvent['Main Action'] = '';
-    } else if (path.startsWith('Arguments.')) {
-      const pathParts = path.split('.');
-  
-      if (path.startsWith('Arguments.Object.')) {
-        const objectKey = pathParts[2];
-        const itemIndex = parseInt(pathParts[3]);
-  
-        if (!isNaN(itemIndex)) {
-          let currentValue = currentEvent.Arguments.Object[objectKey];
-          if (Array.isArray(currentValue)) {
-            // Remove the annotation ID from the annotations array
-            const annotationId = currentValue[itemIndex];
-            currentEvent.annotations = currentEvent.annotations.filter(
-              (ann) => ann.id !== annotationId
-            );
-  
-            // Update the Arguments.Object field
-            currentValue = currentValue.filter((_, i) => i !== itemIndex);
-            currentEvent.Arguments.Object[objectKey] =
-              currentValue.length === 0
-                ? ''
-                : currentValue.length === 1
-                ? currentValue[0]
-                : currentValue;
-          }
-        } else {
+  // Handle event type summaries (Background/Introduction, etc)
+  if (EVENT_TYPES.includes(path)) {
+    currentEvent[path] = '';
+    setJsonData(newData);
+    setLastSaved(new Date());
+    return;
+  }
+
+  if (path === 'Main Action') {
+    // Remove the annotation from the annotations array
+    currentEvent.annotations = currentEvent.annotations.filter(
+      (ann) => ann.id !== currentEvent['Main Action']
+    );
+    currentEvent['Main Action'] = '';
+  } else if (path.startsWith('Arguments.')) {
+    const pathParts = path.split('.');
+    const argumentType = pathParts[1];
+    
+    if (argumentType === 'Object') {
+      // Handle Object as a direct field, not a nested object
+      const index = parseInt(pathParts[2]);
+      
+      if (!isNaN(index)) {
+        // Handle case where Object is an array of annotation IDs
+        let currentValue = currentEvent.Arguments.Object;
+        if (Array.isArray(currentValue)) {
           // Remove the annotation ID from the annotations array
-          const annotationId = currentEvent.Arguments.Object[objectKey];
+          const annotationId = currentValue[index];
           currentEvent.annotations = currentEvent.annotations.filter(
             (ann) => ann.id !== annotationId
           );
-  
-          // Clear the Arguments.Object field
-          currentEvent.Arguments.Object[objectKey] = '';
+          
+          // Update the Arguments.Object field
+          currentValue = currentValue.filter((_, i) => i !== index);
+          currentEvent.Arguments.Object =
+            currentValue.length === 0
+              ? ''
+              : currentValue.length === 1
+              ? currentValue[0]
+              : currentValue;
         }
       } else {
-        const argumentType = pathParts[1];
-        const index = parseInt(pathParts[2]);
-  
-        if (!isNaN(index)) {
-          let currentValue = currentEvent.Arguments[argumentType];
-          if (Array.isArray(currentValue)) {
-            // Remove the annotation ID from the annotations array
-            const annotationId = currentValue[index];
-            currentEvent.annotations = currentEvent.annotations.filter(
-              (ann) => ann.id !== annotationId
-            );
-  
-            // Update the Arguments field
-            currentValue = currentValue.filter((_, i) => i !== index);
-            currentEvent.Arguments[argumentType] =
-              currentValue.length === 0
-                ? ''
-                : currentValue.length === 1
-                ? currentValue[0]
-                : currentValue;
-          }
-        } else {
+        // Handle case where Object is a single annotation ID
+        const annotationId = currentEvent.Arguments.Object;
+        currentEvent.annotations = currentEvent.annotations.filter(
+          (ann) => ann.id !== annotationId
+        );
+        
+        // Clear the Arguments.Object field
+        currentEvent.Arguments.Object = '';
+      }
+    } else {
+      // Handle other argument types (unchanged)
+      const index = parseInt(pathParts[2]);
+      
+      if (!isNaN(index)) {
+        let currentValue = currentEvent.Arguments[argumentType];
+        if (Array.isArray(currentValue)) {
           // Remove the annotation ID from the annotations array
-          const annotationId = currentEvent.Arguments[argumentType];
+          const annotationId = currentValue[index];
           currentEvent.annotations = currentEvent.annotations.filter(
             (ann) => ann.id !== annotationId
           );
-  
-          // Clear the Arguments field
-          currentEvent.Arguments[argumentType] = '';
+          
+          // Update the Arguments field
+          currentValue = currentValue.filter((_, i) => i !== index);
+          currentEvent.Arguments[argumentType] =
+            currentValue.length === 0
+              ? ''
+              : currentValue.length === 1
+              ? currentValue[0]
+              : currentValue;
         }
+      } else {
+        // Remove the annotation ID from the annotations array
+        const annotationId = currentEvent.Arguments[argumentType];
+        currentEvent.annotations = currentEvent.annotations.filter(
+          (ann) => ann.id !== annotationId
+        );
+        
+        // Clear the Arguments field
+        currentEvent.Arguments[argumentType] = '';
       }
     }
+  }
   
-    // Update the state to trigger a re-render
-    setJsonData([...newData]);
-    setLastSaved(new Date());
-  };
+  // Update the state to trigger a re-render
+  setJsonData([...newData]);
+  setLastSaved(new Date());
+};
 
   // Handle summary change
   const handleSummaryChange = (event) => {

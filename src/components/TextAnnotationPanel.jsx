@@ -14,8 +14,8 @@ const HIGHLIGHT_COLORS = {
   'Method': 'bg-red-200 hover:bg-red-300',
   'Results': 'bg-amber-200 hover:bg-amber-300',
   'Analysis': 'bg-lime-200 hover:bg-lime-300',
-  'Challenge': 'bg-cyan-200 hover:bg-cyan-300',
-  'Ethical': 'bg-emerald-200 hover:bg-emerald-300',
+  'Challenge': 'bg-magenta-200 hover:bg-magenta-300',
+  'Ethical': 'bg-emerald-400 hover:bg-emerald-700',
   'Implications': 'bg-red-400 hover:bg-red-700',
   'Contradictions': 'bg-fuchsia-200 hover:bg-fuchsia-300'
 };
@@ -45,7 +45,7 @@ const ANNOTATION_BUTTONS = [
   { type: 'Results', label: 'Results', baseColor: 'amber', description: 'Observations or outputs of the paragraph' },
   { type: 'Analysis', label: 'Analysis', baseColor: 'lime', description: 'Interpretation or explanation of other Arguments' },
   { type: 'Challenge', label: 'Challenge', baseColor: 'cyan', description: 'Constraints or weaknesses of the Context, Method or Results' },
-  { type: 'Ethical', label: 'Ethical', baseColor: 'emerald', description: 'Ethical concerns, implications, and justifications of the paragraph' },
+  { type: 'Ethical', label: 'Ethical', baseColor: 'emerald-400 text-white', description: 'Ethical concerns, implications, and justifications of the paragraph' },
   { type: 'Implications', label: 'Implications', baseColor: 'red-400 text-white', description: 'Broader applicability or significance and future research' },
   { type: 'Contradictions', label: 'Contradictions', baseColor: 'fuchsia', description: 'Disagreements to existing knowledge' }
 ];

@@ -40,7 +40,7 @@ export const cleanSelectedText = (text) => {
         'Results/Findings',
         'Conclusions/Implications',
         'Text',
-        'Main Action', // Ensure Main Action appears before Arguments
+        'Action', // Ensure Action appears before Arguments
         'Arguments',
       ];
 

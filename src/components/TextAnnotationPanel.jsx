@@ -38,10 +38,10 @@ const KEYBOARD_SHORTCUTS = {
 };
 
 const ANNOTATION_BUTTONS = [
-  { type: 'Main_Action', label: 'Main Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
-  { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Person or Thing that does the Main Action' },
-  { type: 'Primary_Object', label: 'Primary Object', baseColor: 'violet', description: 'Primary receiver/target of the Main Action' },
-  { type: 'Secondary_Object', label: 'Secondary Object', baseColor: 'indigo', description: 'Secondary receiver/target of the Main Action' },
+  { type: 'Main_Action', label: 'Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
+  { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Person or Thing that does the Action' },
+  { type: 'Primary_Object', label: 'Primary Object', baseColor: 'violet', description: 'Primary receiver/target of the Action' },
+  { type: 'Secondary_Object', label: 'Secondary Object', baseColor: 'indigo', description: 'Secondary receiver/target of the Action' },
   { type: 'Context', label: 'Context', baseColor: 'orange', description: 'Foundational or situational information of the paragraph' },
   { type: 'Purpose', label: 'Purpose', baseColor: 'pink', description: 'Purpose or aim of the paragraph' },
   { type: 'Method', label: 'Method', baseColor: 'red', description: 'Techniques, tools, methodology or frameworks used in the paragraph' },
@@ -72,7 +72,7 @@ const TextAnnotationPanel = ({
   const [selectionActive, setSelectionActive] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
 
-  // Check if Main Action exists
+  // Check if Action exists
   const hasMainAction = annotations.some(ann => ann.type === 'Main_Action');
 
   // Clear current selection
@@ -119,7 +119,7 @@ const TextAnnotationPanel = ({
         e.preventDefault();
         if (annotationType !== 'Main_Action' && !hasMainAction) {
           setShowToast(true);
-          setStatusMessage('Please annotate Main Action first');
+          setStatusMessage('Please annotate Action first');
           return;
         }
         handleAnnotationClick(annotationType);
@@ -295,14 +295,14 @@ const TextAnnotationPanel = ({
       return;
     }
   
-    // Prevent multiple Main Action annotations
+    // Prevent multiple Action annotations
     if (annotationType === 'Main_Action' && hasMainAction) {
-      setShowToast({ message: 'Main Action already annotated. Please remove the existing one first.', type: 'error' });
+      setShowToast({ message: 'Action already annotated. Please remove the existing one first.', type: 'error' });
       return;
     }
   
     if (annotationType !== 'Main_Action' && !hasMainAction) {
-      setShowToast({ message: 'Please annotate Main Action first', type: 'error' });
+      setShowToast({ message: 'Please annotate Action first', type: 'error' });
       return;
     }
   
@@ -415,7 +415,7 @@ const TextAnnotationPanel = ({
       {!hasMainAction && (
         <div className="mb-4 p-3 bg-yellow-100 rounded-lg border border-yellow-200" role="alert">
           <span className="text-sm text-yellow-800 font-medium">
-            ⚠️ Please annotate the Main Action first before adding other annotations
+            ⚠️ Please annotate the Action first before adding other annotations
           </span>
         </div>
       )}
@@ -480,7 +480,7 @@ const TextAnnotationPanel = ({
                   aria-label={`${button.label} (Press ${shortcut})`}
                   aria-disabled={isDisabled}
                   title={isDisabled
-                    ? 'Please annotate Main Action first'
+                    ? 'Please annotate Action first'
                     : `${button.description} (Shortcut: ${shortcut})`}
                 >
                   <span>{button.label}</span>

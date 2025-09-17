@@ -41,9 +41,9 @@ const TutorialDialog = ({ isOpen, onClose }) => {
           {/* Left Column */}
           <div className="space-y-4">
             <div className="border-l-4 border-blue-500 pl-4 py-2">
-              <h3 className="font-semibold text-base mb-1">1. Main Action First</h3>
+              <h3 className="font-semibold text-base mb-1">1. Action First</h3>
               <p className="text-sm text-gray-600">
-                Always annotate the Main Action first. Other annotation buttons will be disabled 
+                Always annotate the Action first. Other annotation buttons will be disabled 
                 until you've identified the main action.
               </p>
             </div>

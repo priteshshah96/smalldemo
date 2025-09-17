@@ -10,7 +10,7 @@ const FIELD_ORDER = [
   'Results/Findings',
   'Conclusions/Implications',
   'Text',
-  'Main Action',
+  'Action',
   'Arguments'
 ];
 

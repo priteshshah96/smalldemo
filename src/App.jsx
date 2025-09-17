@@ -23,7 +23,7 @@ const DEFAULT_EVENT_STRUCTURE = {
   'Results/Findings': '',
   'Conclusions/Implications': '',
   Text: '',
-  'Main Action': '',
+  'Action': '',
   Arguments: {
     Agent: '',
     Object: {
@@ -123,7 +123,7 @@ const App = () => {
       events: paper.events.map((event) => {
         // Create a base structure with only the fields that exist in the event
         const baseStructure = {
-          'Main Action': '', // Ensure Main Action is always present, even if empty
+          'Action': '', // Ensure Main Action is always present, even if empty
           ...event, // Spread existing fields
         };
   
@@ -141,7 +141,10 @@ const App = () => {
   
         // Handle existing annotations
         if (event['Main Action']) {
-          baseStructure['Main Action'] = event['Main Action'];
+          baseStructure['Action'] = event['Main Action'];
+        }
+        if (event['Action']) {
+          baseStructure['Action'] = event['Action'];
         }
         if (event.Arguments) {
           baseStructure.Arguments = {
@@ -214,9 +217,9 @@ const App = () => {
       end: currentSelection.end,
     });
 
-    // Update the Main Action or Arguments field
+    // Update the Action or Arguments field
     if (annotationType === 'Main_Action') {
-      currentEvent['Main Action'] = annotationId; // Ensure this is the ID, not the object
+      currentEvent['Action'] = annotationId; // Ensure this is the ID, not the object
     } else if (annotationType === 'Primary_Object') {
       // Ensure Object structure exists
       if (!currentEvent.Arguments.Object) {
@@ -279,12 +282,12 @@ const App = () => {
     return;
   }
 
-  if (path === 'Main Action') {
+  if (path === 'Action') {
     // Remove the annotation from the annotations array
     currentEvent.annotations = currentEvent.annotations.filter(
-      (ann) => ann.id !== currentEvent['Main Action']
+      (ann) => ann.id !== currentEvent['Action']
     );
-    currentEvent['Main Action'] = '';
+    currentEvent['Action'] = '';
   } else if (path.startsWith('Arguments.')) {
     const pathParts = path.split('.');
     const argumentType = pathParts[1];

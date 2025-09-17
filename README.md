@@ -1,201 +1,56 @@
+# SciEvent: Benchmarking Multi-domain Scientific Event Extraction
 
-# Annotation Tool
+**Annotation Tool for EMNLP 2025**
 
-A React-based annotation tool that simplifies the process of annotating text documents. This tool allows users to upload JSON files, annotate text with predefined categories, navigate through events, and download annotated data in JSON format. Designed with a clean and interactive UI using **Vite** and **Tailwind CSS**, the tool is highly customizable and easy to use.
+This is the annotation tool developed for the paper "SciEvent: Benchmarking Multi-domain Scientific Event Extraction" submitted to EMNLP 2025.
 
----
+## Authors
 
-## **Table of Contents**
-1. [Features](#features)
-2. [Tech Stack](#tech-stack)
-3. [Installation](#installation)
-4. [Usage](#usage)
-5. [File Structure](#file-structure)
-6. [Annotation Workflow](#annotation-workflow)
-7. [Development Scripts](#development-scripts)
-8. [Future Enhancements](#future-enhancements)
-9. [Contributing](#contributing)
-10. [License](#license)
-11. [Author](#author)
+**Bofu Dong¹, Pritesh Shah¹, Sumedh Sonawane¹, Tiyasha Banerjee¹, Erin Brady¹, Xinya Du², Ming Jiang¹'³**
+
+¹ Indiana University Indianapolis  
+² University of Texas at Dallas  
+³ University of Wisconsin-Madison
+
+**Contact**: bofudong@iu.edu, ming.jiang@wisc.edu
 
 ---
 
-## **Features**
-- **File Upload**:
-  - Drag-and-drop JSON files or use the "Browse Files" button.
-  - Supports input validation to ensure proper file structure.
+## About
 
-- **Customizable Annotations**:
-  - Annotate text with categories like:
-    - **Main Action**
-    - **Agent**
-    - **Object** (Base Object, Modifier, Attached Object, etc.)
-    - **Context, Purpose, Method, Results**, and more.
-  - Multi-span support for assigning multiple text fragments to the same category.
+This web-based annotation tool enables researchers to annotate scientific text for event extraction tasks. The tool supports:
 
-- **Real-Time Feedback**:
-  - Visual highlighting for annotated text with distinct colors for each category.
-  - Tooltips for annotation details on hover.
+- **Multi-domain Scientific Event Annotation**: Annotate events across different scientific domains
+- **Structured Annotation Schema**: Main Action, Agent, Primary/Secondary Objects, Context, Purpose, Method, Results, Analysis, Challenge, Ethical considerations, Implications, and Contradictions
+- **Interactive Interface**: Real-time text highlighting and annotation with keyboard shortcuts
+- **JSON Export**: Download annotated data for further analysis
 
-- **Error Handling**:
-  - Informative error messages for invalid JSON uploads or improper file structure.
+## Quick Start
 
-- **Navigation**:
-  - Easy navigation between multiple events and papers using "Next" and "Previous" buttons.
+1. **Access the Tool**: Visit the deployed annotation interface
+2. **Upload Data**: Upload your Event Extraction Raw JSON file
+3. **Annotate**: Select text and assign annotation categories using the interface
+4. **Export**: Download your completed annotations as JSON
 
-- **Download Functionality**:
-  - Export annotated data as a JSON file.
+## Installation (Development)
 
----
-
-## **Tech Stack**
-- **Frontend**: React (with Vite for fast builds and development)
-- **Styling**: Tailwind CSS for responsive and modular design
-- **Icons**: Lucide React for lightweight and customizable icons
-- **State Management**: React hooks (`useState`, `useEffect`) for managing UI states
-
----
-
-## **Installation**
-
-### **Prerequisites**
-- Node.js (v16 or later)
-- npm or yarn package manager
-
-### **Steps**
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/priteshshah96/smalldemo.git
-   cd smalldemo
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open your browser and navigate to `http://localhost:5173` to use the tool.
-
----
-
-## **Usage**
-
-### **1. Upload a JSON File**
-- Drag and drop your JSON file or click the "Browse Files" button.
-- Ensure the JSON file follows this structure:
-  ```json
-  [
-    {
-      "paper_code": "Paper1",
-      "abstract": "Abstract text here.",
-      "events": [
-        {
-          "Text": "Event text here",
-          "Main Action": "Action description",
-          "Arguments": {
-            "Agent": "Agent description"
-          }
-        }
-      ]
-    }
-  ]
-  ```
-
-### **2. Annotate Text**
-- Select text in the document and assign a category from the toolbar.
-- Multiple spans can be assigned to the same category (e.g., "Main Action").
-
-### **3. Navigate Events**
-- Use "Next" and "Previous" buttons to navigate through events and papers.
-
-### **4. Download Annotated Data**
-- Click the "Download JSON" button to export your annotations.
-
----
-
-## **File Structure**
-
-```plaintext
-src/
-├── App.jsx                  # Main application logic
-├── index.js                 # React entry point
-├── components/              # All reusable components
-│   ├── JsonViewer.jsx       # Displays JSON annotations
-│   ├── SelectionToolbar.jsx # Toolbar for selecting annotation types
-│   ├── TextAnnotationPanel.jsx # Handles text highlighting and annotation
-├── styles/                  # Tailwind CSS configuration
-├── assets/                  # Static assets (if any)
+```bash
+git clone https://github.com/priteshshah96/smalldemo.git
+cd smalldemo
+npm install
+npm run dev
 ```
 
----
+## Tech Stack
 
-## **Annotation Workflow**
+- **Frontend**: React + Vite
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
 
-1. **Upload JSON**: Upload a JSON file containing text to annotate.
-2. **Text Selection**:
-   - Highlight text to select it.
-   - Choose a category from the toolbar.
-3. **Highlight Annotations**:
-   - View highlighted text annotations in real-time.
-4. **JSON Viewer**:
-   - Inspect and edit JSON annotations.
-   - Delete specific annotations if needed.
-5. **Download**:
-   - Export the annotated JSON file for further use.
+## Paper
+
+This tool was developed to support the research presented in "SciEvent: Benchmarking Multi-domain Scientific Event Extraction" (EMNLP 2025).
 
 ---
 
-## **Development Scripts**
-
-- `npm run dev`: Start the development server.
-- `npm run build`: Build the project for production.
-- `npm run preview`: Preview the production build.
-- `npm run lint`: Run the linter to check for code quality issues.
-
----
-
-## **Future Enhancements**
-- Support for additional annotation types and sub-categories.
-- Enhanced validation for uploaded JSON files.
-- Undo/Redo functionality for annotations.
-- Keyboard shortcuts for faster annotation.
-- Multi-language support for annotations.
-- Collaboration features for team-based annotation.
-
----
-
-## **Contributing**
-Contributions are welcome! Please follow these steps to contribute:
-1. Fork this repository.
-2. Create a feature branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m "Add your feature description"
-   ```
-4. Push to the branch:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. Open a pull request.
-
----
-
-## **License**
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## **Author**
-**Pritesh Shah**  
-[GitHub Profile](https://github.com/priteshshah96)  
-
-Feel free to reach out with questions or suggestions!
-```
-
+**License**: MIT

@@ -636,8 +636,8 @@ const App = () => {
 // File Upload Component
 const FileUploadView = ({ isFileDropActive, setIsFileDropActive, handleFileInput }) => (
   <div
-    className={`min-h-screen bg-gray-50 p-8 flex items-center justify-center
-               ${isFileDropActive ? 'bg-blue-50' : ''}`}
+    className={`min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 p-8 flex flex-col items-center justify-center relative overflow-hidden
+               ${isFileDropActive ? 'from-slate-100 via-gray-100 to-blue-100' : ''}`}
     onDragOver={(e) => {
       e.preventDefault();
       setIsFileDropActive(true);
@@ -652,14 +652,72 @@ const FileUploadView = ({ isFileDropActive, setIsFileDropActive, handleFileInput
       }
     }}
   >
-    <div className="max-w-xl w-full">
+    {/* Background Decorations */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-slate-200/20 to-blue-200/20 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-gray-200/20 to-slate-200/20 rounded-full blur-3xl"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-blue-200/15 to-slate-200/15 rounded-full blur-3xl"></div>
+    </div>
+
+    {/* Header Section */}
+    <div className="text-center mb-8 max-w-4xl relative z-10">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-slate-700 mb-2 leading-tight">
+          SciEvent: Benchmarking Multi-domain Scientific Event Extraction
+        </h1>
+        <h2 className="text-lg font-medium text-slate-600 mb-4">
+          Annotation Tool
+        </h2>
+      </div>
+      
+      {/* Authors Section */}
+      <div className="mb-4 bg-white/60 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
+        <div className="text-slate-700 mb-3">
+          <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 mb-2">
+            <span className="text-sm font-medium">Bofu Dong<sup className="text-xs">1</sup></span>
+            <span className="text-sm font-medium">Pritesh Shah<sup className="text-xs">1</sup></span>
+            <span className="text-sm font-medium">Sumedh Sonawane<sup className="text-xs">1</sup></span>
+            <span className="text-sm font-medium">Tiyasha Banerjee<sup className="text-xs">1</sup></span>
+            <span className="text-sm font-medium">Erin Brady<sup className="text-xs">1</sup></span>
+          </div>
+          <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 mb-3">
+            <span className="text-sm font-medium">Xinya Du<sup className="text-xs">2</sup></span>
+            <span className="text-sm font-medium">Ming Jiang<sup className="text-xs">1,3</sup></span>
+          </div>
+        </div>
+        
+        {/* Affiliations */}
+        <div className="text-xs text-slate-600 space-y-0.5">
+          <div><sup>1</sup>Indiana University Indianapolis</div>
+          <div><sup>2</sup>University of Texas at Dallas</div>
+          <div><sup>3</sup>University of Wisconsin-Madison</div>
+        </div>
+        
+        {/* Contact */}
+        <div className="text-xs text-slate-500 mt-2">
+          <span className="font-mono">bofudong@iu.edu</span> • <span className="font-mono">ming.jiang@wisc.edu</span>
+        </div>
+      </div>
+      
+      <div className="inline-block bg-slate-600 text-white px-4 py-2 rounded-full text-sm font-medium mb-4 shadow-md">
+        EMNLP 2025
+      </div>
+      <p className="text-base text-slate-600 leading-relaxed">
+        Please upload the Event Extraction Raw file below to begin annotation
+      </p>
+    </div>
+
+    {/* Upload Section */}
+    <div className="max-w-xl w-full relative z-10">
       <div
-        className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors
-                     ${isFileDropActive ? 'border-blue-500 bg-blue-100' : 'border-gray-300'}`}
+        className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 backdrop-blur-sm shadow-lg
+                     ${isFileDropActive 
+                       ? 'border-slate-400 bg-white/80 shadow-xl scale-105' 
+                       : 'border-slate-300 bg-white/70 hover:bg-white/80 hover:shadow-xl hover:scale-102'}`}
       >
-        <Upload className="w-16 h-16 mx-auto text-gray-400 mb-4" aria-hidden="true" />
-        <h2 className="text-xl font-semibold mb-2">Upload Annotation File</h2>
-        <p className="text-gray-500 mb-4">Drag and drop your JSON file here or click to browse</p>
+        <Upload className="w-12 h-12 mx-auto text-slate-400 mb-3" aria-hidden="true" />
+        <h2 className="text-lg font-medium text-slate-700 mb-2">Upload Annotation File</h2>
+        <p className="text-sm text-slate-500 mb-4">Drag and drop your JSON file here or click to browse</p>
         <input
           type="file"
           accept=".json"
@@ -669,8 +727,8 @@ const FileUploadView = ({ isFileDropActive, setIsFileDropActive, handleFileInput
         />
         <label
           htmlFor="file-upload"
-          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg 
-                   hover:bg-blue-700 cursor-pointer transition-colors"
+          className="inline-flex items-center px-6 py-3 bg-slate-600 text-white rounded-xl font-medium
+                   hover:bg-slate-700 cursor-pointer transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
         >
           Browse Files
         </label>

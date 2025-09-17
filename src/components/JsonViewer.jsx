@@ -87,7 +87,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
   const isArgumentSection = (path) => {
     return path === 'Arguments' || 
            path.startsWith('Arguments.') || 
-           path === 'Main Action';
+           path === 'Action';
   };
 
   const togglePath = (path) => {

@@ -44,7 +44,7 @@ const TutorialDialog = ({ isOpen, onClose }) => {
               <h3 className="font-semibold text-base mb-1">1. Action First</h3>
               <p className="text-sm text-gray-600">
                 Always annotate the Action first. Other annotation buttons will be disabled 
-                until you've identified the main action.
+                until you've identified the action.
               </p>
             </div>
 

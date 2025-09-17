@@ -123,7 +123,7 @@ const App = () => {
       events: paper.events.map((event) => {
         // Create a base structure with only the fields that exist in the event
         const baseStructure = {
-          'Action': '', // Ensure Main Action is always present, even if empty
+          'Action': '', // Ensure Action is always present, even if empty
           ...event, // Spread existing fields
         };
   
@@ -153,7 +153,7 @@ const App = () => {
           baseStructure.Text = event.Text || '';
         }
   
-        // Handle existing annotations
+        // Handle existing annotations (migrate from old field names)
         if (event['Main Action']) {
           baseStructure['Action'] = event['Main Action'];
         }
@@ -232,7 +232,7 @@ const App = () => {
     });
 
     // Update the Action or Arguments field
-    if (annotationType === 'Main_Action') {
+    if (annotationType === 'Action') {
       currentEvent['Action'] = annotationId; // Ensure this is the ID, not the object
     } else if (annotationType === 'Primary_Object') {
       // Ensure Object structure exists

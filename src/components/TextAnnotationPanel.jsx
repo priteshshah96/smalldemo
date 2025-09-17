@@ -6,7 +6,7 @@ import Toast from './Toast';
 const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-2 border-blue-300 rounded';
 
 const HIGHLIGHT_COLORS = {
-  'Main_Action': 'bg-blue-200 hover:bg-blue-300',
+  'Action': 'bg-blue-200 hover:bg-blue-300',
   'Agent': 'bg-green-200 hover:bg-green-300',
   'Primary_Object': 'bg-violet-200 hover:bg-violet-300',
   'Secondary_Object': 'bg-indigo-200 hover:bg-indigo-300',
@@ -22,7 +22,7 @@ const HIGHLIGHT_COLORS = {
 };
 
 const KEYBOARD_SHORTCUTS = {
-  'Main_Action': '1',
+  'Action': '1',
   'Agent': '2',
   'Primary_Object': '3',
   'Secondary_Object': '4',
@@ -39,13 +39,13 @@ const KEYBOARD_SHORTCUTS = {
 
 // Display name mapping for tooltips
 const TYPE_DISPLAY_NAMES = {
-  'Main_Action': 'Action',
+  'Action': 'Action',
   'Primary_Object': 'Primary Object',
   'Secondary_Object': 'Secondary Object'
 };
 
 const ANNOTATION_BUTTONS = [
-  { type: 'Main_Action', label: 'Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
+  { type: 'Action', label: 'Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
   { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Person or Thing that does the Action' },
   { type: 'Primary_Object', label: 'Primary Object', baseColor: 'violet', description: 'Primary receiver/target of the Action' },
   { type: 'Secondary_Object', label: 'Secondary Object', baseColor: 'indigo', description: 'Secondary receiver/target of the Action' },
@@ -80,7 +80,7 @@ const TextAnnotationPanel = ({
   const [isSelecting, setIsSelecting] = useState(false);
 
   // Check if Action exists
-  const hasMainAction = annotations.some(ann => ann.type === 'Main_Action');
+  const hasMainAction = annotations.some(ann => ann.type === 'Action');
 
   // Clear current selection
   const clearSelection = () => {
@@ -124,7 +124,7 @@ const TextAnnotationPanel = ({
 
       if (annotationType) {
         e.preventDefault();
-        if (annotationType !== 'Main_Action' && !hasMainAction) {
+        if (annotationType !== 'Action' && !hasMainAction) {
           setShowToast(true);
           setStatusMessage('Please annotate Action first');
           return;
@@ -303,12 +303,12 @@ const TextAnnotationPanel = ({
     }
   
     // Prevent multiple Action annotations
-    if (annotationType === 'Main_Action' && hasMainAction) {
+    if (annotationType === 'Action' && hasMainAction) {
       setShowToast({ message: 'Action already annotated. Please remove the existing one first.', type: 'error' });
       return;
     }
   
-    if (annotationType !== 'Main_Action' && !hasMainAction) {
+    if (annotationType !== 'Action' && !hasMainAction) {
       setShowToast({ message: 'Please annotate Action first', type: 'error' });
       return;
     }
@@ -467,7 +467,7 @@ const TextAnnotationPanel = ({
           aria-labelledby="annotation-buttons-label"
         >
           {ANNOTATION_BUTTONS.map((button, index) => {
-            const isDisabled = button.type !== 'Main_Action' && !hasMainAction;
+            const isDisabled = button.type !== 'Action' && !hasMainAction;
             const shortcut = KEYBOARD_SHORTCUTS[button.type];
             const buttonColor = button.type === 'Implications' 
               ? `bg-red-400 hover:bg-red-500`

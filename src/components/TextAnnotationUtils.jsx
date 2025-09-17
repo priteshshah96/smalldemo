@@ -35,10 +35,10 @@ export const cleanSelectedText = (text) => {
   
       // Define the desired field order
       const fieldOrder = [
-        'Background/Introduction',
-        'Methods/Approach',
-        'Results/Findings',
-        'Conclusions/Implications',
+        'Background',
+        'Method',
+        'Result',
+        'Conclusion',
         'Text',
         'Action', // Ensure Action appears before Arguments
         'Arguments',

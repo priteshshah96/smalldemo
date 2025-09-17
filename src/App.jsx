@@ -18,10 +18,10 @@ import { prepareDataForDownload,  annotationStore } from './components/TextAnnot
 
 // Constants
 const DEFAULT_EVENT_STRUCTURE = {
-  'Background/Introduction': '',
-  'Methods/Approach': '',
-  'Results/Findings': '',
-  'Conclusions/Implications': '',
+  'Background': '',
+  'Method': '',
+  'Result': '',
+  'Conclusion': '',
   Text: '',
   'Action': '',
   Arguments: {
@@ -43,10 +43,10 @@ const DEFAULT_EVENT_STRUCTURE = {
 };
 
 const EVENT_TYPES = [
-  'Background/Introduction',
-  'Methods/Approach',
-  'Results/Findings',
-  'Conclusions/Implications',
+  'Background',
+  'Method',
+  'Result',
+  'Conclusion',
 ];
 
 const App = () => {
@@ -127,10 +127,24 @@ const App = () => {
           ...event, // Spread existing fields
         };
   
-        // Add the event type and text if they exist
+        // Add the event type and text if they exist (handle both old and new formats)
         EVENT_TYPES.forEach((type) => {
           if (event[type] !== undefined) {
             baseStructure[type] = event[type] || '';
+          }
+        });
+        
+        // Handle migration from old event type names
+        const eventTypeMigration = {
+          'Background/Introduction': 'Background',
+          'Methods/Approach': 'Method',
+          'Results/Findings': 'Result',
+          'Conclusions/Implications': 'Conclusion'
+        };
+        
+        Object.entries(eventTypeMigration).forEach(([oldType, newType]) => {
+          if (event[oldType] !== undefined) {
+            baseStructure[newType] = event[oldType] || '';
           }
         });
   

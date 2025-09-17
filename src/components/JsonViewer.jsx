@@ -5,10 +5,10 @@ import { prepareDataForDownload,  annotationStore } from './TextAnnotationUtils'
 
 // Field ordering constants
 const FIELD_ORDER = [
-  'Background/Introduction',
-  'Methods/Approach',
-  'Results/Findings',
-  'Conclusions/Implications',
+  'Background',
+  'Method',
+  'Result',
+  'Conclusion',
   'Text',
   'Action',
   'Arguments'
@@ -34,10 +34,10 @@ const OBJECT_ORDER = [
 ];
 
 const EVENT_TYPES = [
-  'Background/Introduction',
-  'Methods/Approach',
-  'Results/Findings',
-  'Conclusions/Implications'
+  'Background',
+  'Method',
+  'Result',
+  'Conclusion'
 ];
 
 // UI Colors

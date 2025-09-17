@@ -37,6 +37,13 @@ const KEYBOARD_SHORTCUTS = {
   'Contradictions': 'd'
 };
 
+// Display name mapping for tooltips
+const TYPE_DISPLAY_NAMES = {
+  'Main_Action': 'Action',
+  'Primary_Object': 'Primary Object',
+  'Secondary_Object': 'Secondary Object'
+};
+
 const ANNOTATION_BUTTONS = [
   { type: 'Main_Action', label: 'Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
   { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Person or Thing that does the Action' },
@@ -357,7 +364,7 @@ const TextAnnotationPanel = ({
           onMouseEnter={() => setHoveredAnnotation(index)}
           onMouseLeave={() => setHoveredAnnotation(null)}
           role="mark"
-          aria-label={`${annotation.type.replace('_', ' ')} annotation: ${annotationText}`}
+          aria-label={`${TYPE_DISPLAY_NAMES[annotation.type] || annotation.type.replace('_', ' ')} annotation: ${annotationText}`}
           tabIndex="0"
         >
           {annotationText}
@@ -370,7 +377,7 @@ const TextAnnotationPanel = ({
               id={`tooltip-${index}`}
               aria-hidden="true"
             >
-              {annotation.type.replace('_', ' ')}
+              {TYPE_DISPLAY_NAMES[annotation.type] || annotation.type.replace('_', ' ')}
             </div>
           )}
         </mark>

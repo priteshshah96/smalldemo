@@ -326,7 +326,7 @@ const TextAnnotationPanel = ({
       
       // Clear selection and show feedback
       clearSelection();
-      setShowToast({ message: `Applied ${annotationType.replace('_', ' ')} annotation`, type: 'success' });
+      setShowToast({ message: `Applied ${TYPE_DISPLAY_NAMES[annotationType] || annotationType.replace('_', ' ')} annotation`, type: 'success' });
     }
   };
 

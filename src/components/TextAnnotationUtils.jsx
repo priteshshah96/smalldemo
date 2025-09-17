@@ -43,11 +43,66 @@ export const cleanSelectedText = (text) => {
         'Main Action', // Ensure Main Action appears before Arguments
         'Arguments',
       ];
+
+      // Define the Arguments field order
+      const argumentsOrder = [
+        'Agent',
+        'Object',
+        'Context',
+        'Purpose',
+        'Method',
+        'Results',
+        'Analysis',
+        'Challenge',
+        'Ethical',
+        'Implications',
+        'Contradictions',
+      ];
+
+      // Define the Object field order
+      const objectOrder = [
+        'Primary Object',
+        'Secondary Object',
+      ];
   
       // Iterate over the desired field order and include only existing fields
       fieldOrder.forEach((key) => {
         if (obj.hasOwnProperty(key)) {
-          result[key] = prepareDataForDownload(obj[key]);
+          if (key === 'Arguments' && typeof obj[key] === 'object' && obj[key] !== null) {
+            // Handle Arguments field with custom ordering
+            const orderedArguments = {};
+            argumentsOrder.forEach((argKey) => {
+              if (obj[key].hasOwnProperty(argKey)) {
+                if (argKey === 'Object' && typeof obj[key][argKey] === 'object' && obj[key][argKey] !== null) {
+                  // Handle nested Object field with custom ordering
+                  const orderedObject = {};
+                  objectOrder.forEach((objKey) => {
+                    if (obj[key][argKey].hasOwnProperty(objKey)) {
+                      orderedObject[objKey] = prepareDataForDownload(obj[key][argKey][objKey]);
+                    }
+                  });
+                  // Include any additional fields not in the predefined order
+                  Object.keys(obj[key][argKey]).forEach((objKey) => {
+                    if (!objectOrder.includes(objKey)) {
+                      orderedObject[objKey] = prepareDataForDownload(obj[key][argKey][objKey]);
+                    }
+                  });
+                  orderedArguments[argKey] = orderedObject;
+                } else {
+                  orderedArguments[argKey] = prepareDataForDownload(obj[key][argKey]);
+                }
+              }
+            });
+            // Include any additional fields not in the predefined order
+            Object.keys(obj[key]).forEach((argKey) => {
+              if (!argumentsOrder.includes(argKey)) {
+                orderedArguments[argKey] = prepareDataForDownload(obj[key][argKey]);
+              }
+            });
+            result[key] = orderedArguments;
+          } else {
+            result[key] = prepareDataForDownload(obj[key]);
+          }
         }
       });
   

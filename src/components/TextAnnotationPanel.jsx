@@ -8,7 +8,8 @@ const PERSISTENT_SELECTION_STYLE = 'bg-blue-100 border-2 border-blue-300 rounded
 const HIGHLIGHT_COLORS = {
   'Main_Action': 'bg-blue-200 hover:bg-blue-300',
   'Agent': 'bg-green-200 hover:bg-green-300',
-  'Object': 'bg-violet-200 hover:bg-violet-300', 
+  'Primary_Object': 'bg-violet-200 hover:bg-violet-300',
+  'Secondary_Object': 'bg-indigo-200 hover:bg-indigo-300',
   'Context': 'bg-orange-200 hover:bg-orange-300',
   'Purpose': 'bg-pink-200 hover:bg-pink-300', 
   'Method': 'bg-red-200 hover:bg-red-300',
@@ -23,13 +24,14 @@ const HIGHLIGHT_COLORS = {
 const KEYBOARD_SHORTCUTS = {
   'Main_Action': '1',
   'Agent': '2',
-  'Object': '3', 
-  'Context': '4',
-  'Purpose': '5',
-  'Method': '6',
-  'Results': '7',
-  'Analysis': '8',
-  'Challenge': '9',
+  'Primary_Object': '3',
+  'Secondary_Object': '4',
+  'Context': '5',
+  'Purpose': '6',
+  'Method': '7',
+  'Results': '8',
+  'Analysis': '9',
+  'Challenge': '0',
   'Ethical': 'e',
   'Implications': 'i',
   'Contradictions': 'd'
@@ -38,7 +40,8 @@ const KEYBOARD_SHORTCUTS = {
 const ANNOTATION_BUTTONS = [
   { type: 'Main_Action', label: 'Main Action', baseColor: 'blue', description: 'The most representative verb/verb phrase of the paragraph' },
   { type: 'Agent', label: 'Agent', baseColor: 'green', description: 'Person or Thing that does the Main Action' },
-  { type: 'Object', label: 'Object', baseColor: 'violet', description: 'Receiver/target of the Main Action' }, 
+  { type: 'Primary_Object', label: 'Primary Object', baseColor: 'violet', description: 'Primary receiver/target of the Main Action' },
+  { type: 'Secondary_Object', label: 'Secondary Object', baseColor: 'indigo', description: 'Secondary receiver/target of the Main Action' },
   { type: 'Context', label: 'Context', baseColor: 'orange', description: 'Foundational or situational information of the paragraph' },
   { type: 'Purpose', label: 'Purpose', baseColor: 'pink', description: 'Purpose or aim of the paragraph' },
   { type: 'Method', label: 'Method', baseColor: 'red', description: 'Techniques, tools, methodology or frameworks used in the paragraph' },
@@ -499,7 +502,7 @@ const TextAnnotationPanel = ({
           <br />
           • Press Enter to activate buttons
           <br />
-          • Use number keys 1-9 and letters (e,i,d) for quick annotation
+          • Use number keys 1-9, 0 and letters (e,i,d) for quick annotation
           <br />
           • Press ESC to clear text selection
           <br />

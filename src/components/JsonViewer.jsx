@@ -28,7 +28,9 @@ const ARGUMENTS_ORDER = [
   'Contradictions'
 ];
 
-const OBJECT_FIELD_ORDER = [
+const OBJECT_ORDER = [
+  'Primary Object',
+  'Secondary Object'
 ];
 
 const EVENT_TYPES = [
@@ -162,7 +164,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
                     <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
                   </button>
                   {index < nonEmptyValues.length - 1 && (
-                    <span className={SYNTAX_COLORS.comma}>, </span>
+                    <span className={SYNTAX_COLORS.comma}>,</span>
                   )}
                 </div>
               );
@@ -190,7 +192,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
                   <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
                 </button>
                 {index < nonEmptyValues.length - 1 && (
-                  <span className={SYNTAX_COLORS.comma}>, </span>
+                  <span className={SYNTAX_COLORS.comma}>,</span>
                 )}
               </div>
             );
@@ -228,7 +230,7 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
               <span className={SYNTAX_COLORS.colon}>: </span>
               {renderValue(val, `${path}.${key}`)}
               {index < Object.keys(value).length - 1 && (
-                <span className={SYNTAX_COLORS.comma}>, </span>
+                <span className={SYNTAX_COLORS.comma}>,</span>
               )}
             </div>
           ))}
@@ -292,14 +294,16 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
                   entries = sortEntries(entries, FIELD_ORDER);
                 } else if (path === 'Arguments') {
                   entries = sortEntries(entries, ARGUMENTS_ORDER);
+                } else if (path === 'Arguments.Object') {
+                  entries = sortEntries(entries, OBJECT_ORDER);
                 } 
                 return entries.map(([k, v], index) => (
-                  <React.Fragment key={k}>
+                  <div key={k}>
                     {renderField(k, v, depth + 1, currentPath)}
                     {index < entries.length - 1 && (
                       <span className={SYNTAX_COLORS.comma}>,</span>
                     )}
-                  </React.Fragment>
+                  </div>
                 ));
               })()
             )}
@@ -354,12 +358,12 @@ const JsonViewer = ({ data, onDownload, onRemoveAnnotation }) => {
           {(() => {
             const entries = sortEntries(Object.entries(displayData), FIELD_ORDER);
             return entries.map(([key, value], index) => (
-              <React.Fragment key={key}>
+              <div key={key}>
                 {renderField(key, value, 1)}
                 {index < entries.length - 1 && (
                   <span className={SYNTAX_COLORS.comma}>,</span>
                 )}
-              </React.Fragment>
+              </div>
             ));
           })()}
         </div>

@@ -26,7 +26,10 @@ const DEFAULT_EVENT_STRUCTURE = {
   'Main Action': '',
   Arguments: {
     Agent: '',
-    Object: '',
+    Object: {
+      'Primary Object': '',
+      'Secondary Object': '',
+    },
     Context: '',
     Purpose: '',
     Method: '',
@@ -144,8 +147,35 @@ const App = () => {
           baseStructure.Arguments = {
             ...(baseStructure.Arguments || {}),
             ...event.Arguments,
-            Object: event.Arguments.Object || '',
           };
+          
+          // Initialize Object structure if it doesn't exist
+          if (!baseStructure.Arguments.Object) {
+            baseStructure.Arguments.Object = {
+              'Primary Object': '',
+              'Secondary Object': '',
+            };
+          }
+          
+          // Migrate old Object field to Primary Object if it exists
+          if (event.Arguments.Object && typeof event.Arguments.Object === 'string') {
+            baseStructure.Arguments.Object['Primary Object'] = event.Arguments.Object;
+            delete baseStructure.Arguments.Object;
+            baseStructure.Arguments.Object = {
+              'Primary Object': event.Arguments.Object,
+              'Secondary Object': '',
+            };
+          }
+          
+          // Handle Primary_Object and Secondary_Object migration
+          if (event.Arguments.Primary_Object) {
+            baseStructure.Arguments.Object['Primary Object'] = event.Arguments.Primary_Object;
+            delete baseStructure.Arguments.Primary_Object;
+          }
+          if (event.Arguments.Secondary_Object) {
+            baseStructure.Arguments.Object['Secondary Object'] = event.Arguments.Secondary_Object;
+            delete baseStructure.Arguments.Secondary_Object;
+          }
         }
   
         // Initialize annotations array if it doesn't exist
@@ -187,16 +217,41 @@ const App = () => {
     // Update the Main Action or Arguments field
     if (annotationType === 'Main_Action') {
       currentEvent['Main Action'] = annotationId; // Ensure this is the ID, not the object
-    } else if (annotationType === 'Object') {
-  if (!currentEvent.Arguments.Object) {
-    currentEvent.Arguments.Object = annotationId;
-  } else {
-    const currentValue = currentEvent.Arguments.Object;
-    currentEvent.Arguments.Object = Array.isArray(currentValue)
-      ? [...currentValue, annotationId]
-      : [currentValue, annotationId];
-    }
-  } else {
+    } else if (annotationType === 'Primary_Object') {
+      // Ensure Object structure exists
+      if (!currentEvent.Arguments.Object) {
+        currentEvent.Arguments.Object = {
+          'Primary Object': '',
+          'Secondary Object': '',
+        };
+      }
+      
+      if (!currentEvent.Arguments.Object['Primary Object']) {
+        currentEvent.Arguments.Object['Primary Object'] = annotationId;
+      } else {
+        const currentValue = currentEvent.Arguments.Object['Primary Object'];
+        currentEvent.Arguments.Object['Primary Object'] = Array.isArray(currentValue)
+          ? [...currentValue, annotationId]
+          : [currentValue, annotationId];
+      }
+    } else if (annotationType === 'Secondary_Object') {
+      // Ensure Object structure exists
+      if (!currentEvent.Arguments.Object) {
+        currentEvent.Arguments.Object = {
+          'Primary Object': '',
+          'Secondary Object': '',
+        };
+      }
+      
+      if (!currentEvent.Arguments.Object['Secondary Object']) {
+        currentEvent.Arguments.Object['Secondary Object'] = annotationId;
+      } else {
+        const currentValue = currentEvent.Arguments.Object['Secondary Object'];
+        currentEvent.Arguments.Object['Secondary Object'] = Array.isArray(currentValue)
+          ? [...currentValue, annotationId]
+          : [currentValue, annotationId];
+      }
+    } else {
       if (!currentEvent.Arguments[annotationType]) {
         currentEvent.Arguments[annotationType] = annotationId;
       } else {
@@ -235,37 +290,40 @@ const App = () => {
     const argumentType = pathParts[1];
     
     if (argumentType === 'Object') {
-      // Handle Object as a direct field, not a nested object
-      const index = parseInt(pathParts[2]);
+      // Handle nested Object structure
+      const objectType = pathParts[2]; // 'Primary Object' or 'Secondary Object'
+      const index = parseInt(pathParts[3]);
       
-      if (!isNaN(index)) {
-        // Handle case where Object is an array of annotation IDs
-        let currentValue = currentEvent.Arguments.Object;
-        if (Array.isArray(currentValue)) {
-          // Remove the annotation ID from the annotations array
-          const annotationId = currentValue[index];
+      if (objectType === 'Primary Object' || objectType === 'Secondary Object') {
+        if (!isNaN(index)) {
+          // Handle case where field is an array of annotation IDs
+          let currentValue = currentEvent.Arguments.Object[objectType];
+          if (Array.isArray(currentValue)) {
+            // Remove the annotation ID from the annotations array
+            const annotationId = currentValue[index];
+            currentEvent.annotations = currentEvent.annotations.filter(
+              (ann) => ann.id !== annotationId
+            );
+            
+            // Update the Object field
+            currentValue = currentValue.filter((_, i) => i !== index);
+            currentEvent.Arguments.Object[objectType] =
+              currentValue.length === 0
+                ? ''
+                : currentValue.length === 1
+                ? currentValue[0]
+                : currentValue;
+          }
+        } else {
+          // Handle case where field is a single annotation ID
+          const annotationId = currentEvent.Arguments.Object[objectType];
           currentEvent.annotations = currentEvent.annotations.filter(
             (ann) => ann.id !== annotationId
           );
           
-          // Update the Arguments.Object field
-          currentValue = currentValue.filter((_, i) => i !== index);
-          currentEvent.Arguments.Object =
-            currentValue.length === 0
-              ? ''
-              : currentValue.length === 1
-              ? currentValue[0]
-              : currentValue;
+          // Clear the Object field
+          currentEvent.Arguments.Object[objectType] = '';
         }
-      } else {
-        // Handle case where Object is a single annotation ID
-        const annotationId = currentEvent.Arguments.Object;
-        currentEvent.annotations = currentEvent.annotations.filter(
-          (ann) => ann.id !== annotationId
-        );
-        
-        // Clear the Arguments.Object field
-        currentEvent.Arguments.Object = '';
       }
     } else {
       // Handle other argument types (unchanged)
